@@ -123,7 +123,7 @@ print(sys.executable)
 - `data/generate_data.py`가 시드 42로 `orders.csv`(주문 5,160행)와 `products.csv`(상품 200행)를 만든다.
 - `DataAnalyzer.load_data()`가 두 파일을 `product_id`로 합쳐 13개 컬럼 표 하나로 만든다.
 - 이미지 한 장은 16 x 16 x 3 = 768개 숫자를 공백으로 이은 문자열 한 칸으로 CSV에 들어간다. (CSV 칸에는 배열을 직접 넣을 수 없다)
-- 일부러 넣은 특징: 결측치(price 7.2%, rating 11.0%), 대량 주문 이상치, 11~12월 주문 증가, 고객 5가지 행동 유형. 파이프라인이 이것을 찾아내는지 확인하는 용도다.
+- 일부러 넣은 특징: 결측치(price 7.2%, rating 11.0%), 대량 주문 이상치, 11\~12월 주문 증가, 고객 5가지 행동 유형. 파이프라인이 이것을 찾아내는지 확인하는 용도다.
 
 <br>
 <br>
@@ -259,7 +259,7 @@ df["price"] = df["price"].fillna(df.groupby("category")["price"].transform("medi
 ## 이게 뭔가
 - 이상치(Outlier): 다른 값들과 동떨어지게 크거나 작은 값이다.
 - IQR(Interquartile Range, 사분위 범위) = Q3 - Q1. 가운데 50% 데이터가 퍼진 폭이다.
-- 정상 범위: `Q1 - 1.5 x IQR` ~ `Q3 + 1.5 x IQR`. 벗어나면 이상치다.
+- 정상 범위: `Q1 - 1.5 x IQR` \~ `Q3 + 1.5 x IQR`. 벗어나면 이상치다.
 - 1.5는 관례(threshold, 임계값)다. 3.0처럼 크게 하면 정말 심한 값만 이상치가 된다.
 
 ```python
@@ -290,7 +290,7 @@ outliers = df[(df[col] < lower) | (df[col] > upper)]
 
 ## 이 과제에서는
 - `get_iqr_bounds()`가 정상 범위를, `detect_outliers()`가 범위 밖 행을, `handle_outliers()`가 `clip` 또는 `remove`를 한다. `threshold`는 인자다.
-- `amount`의 정상 범위는 -119,237.5 ~ 270,262.5원이고 이상치는 550건(10.7%)이다. threshold 3.0이면 244건(4.7%)이다.
+- `amount`의 정상 범위는 -119,237.5 \~ 270,262.5원이고 이상치는 550건(10.7%)이다. threshold 3.0이면 244건(4.7%)이다.
 - 550건 중 473건(86%)이 Electronics였다. 비싼 상품의 정상 주문이라 삭제하지 않았다. 삭제하면 매출이 사라져 RFM이 틀어진다.
 - 분포를 보기 위한 `amount_clipped` 컬럼만 따로 만들었고, 왜도는 18.8에서 1.2로 줄었다. RFM의 M은 원본 `amount`를 쓴다.
 - 처리 전후는 노트북 4장의 박스플롯과 히스토그램으로 비교한다.
@@ -351,13 +351,13 @@ img = flat.reshape(2, 2)                                   # 1차원 → 2x2 배
 
 | 피처 | 계산 | 뜻 |
 |---|---|---|
-| 평균 | `mean(axis=(1,2,3))` | 밝기. 0(검정) ~ 255(흰색) |
+| 평균 | `mean(axis=(1,2,3))` | 밝기. 0(검정) \~ 255(흰색) |
 | 표준편차 | `std(axis=(1,2,3))` | 밝기가 얼마나 다양한지(복잡도) |
 | 밝기 히스토그램 | 밝기를 구간으로 나눠 구간별 픽셀 비율 | 어두운 픽셀이 많은지 밝은 픽셀이 많은지 |
 | 엣지(Edge) | `np.diff`로 이웃 픽셀 간 밝기 차이의 평균 | 윤곽선이 많은지 |
 
 - 흑백(grayscale) 변환: 색 축(axis=3)을 평균 내면 된다. `gray = images.mean(axis=3)`
-- RGB(Red, Green, Blue): 픽셀 하나를 빨강, 초록, 파랑 세 숫자(각 0~255)로 나타내는 방식이다.
+- RGB(Red, Green, Blue): 픽셀 하나를 빨강, 초록, 파랑 세 숫자(각 0\~255)로 나타내는 방식이다.
 
 ### 텍스트 피처
 
@@ -377,7 +377,7 @@ df["name"].str.len()              # 글자 수(공백 포함)
 - `add_image_features()` → `img_mean`, `img_std`
 - `add_image_advanced_features(bins=4)` → 밝기 4구간 비율 `img_hist_0~3`, 엣지 강도 `img_edge`
 - `add_text_features()` → `name_word_count`, `name_length`
-- 결과: 카테고리별 이미지 밝기는 Electronics 71.7(가장 어두움) ~ Beauty 205.0(가장 밝음). 상품명은 평균 3.0단어, 17.9글자.
+- 결과: 카테고리별 이미지 밝기는 Electronics 71.7(가장 어두움) \~ Beauty 205.0(가장 밝음). 상품명은 평균 3.0단어, 17.9글자.
 
 <br>
 <br>
@@ -385,7 +385,7 @@ df["name"].str.len()              # 글자 수(공백 포함)
 # 10. 상관계수와 교란 변수
 
 ## 이게 뭔가
-- 상관계수(Correlation Coefficient): 두 숫자가 함께 움직이는 정도를 -1 ~ 1로 나타낸다. 가장 흔한 것이 피어슨(Pearson) 상관계수 r이다.
+- 상관계수(Correlation Coefficient): 두 숫자가 함께 움직이는 정도를 -1 \~ 1로 나타낸다. 가장 흔한 것이 피어슨(Pearson) 상관계수 r이다.
 
 | 값 | 뜻 |
 |---|---|
@@ -393,7 +393,7 @@ df["name"].str.len()              # 글자 수(공백 포함)
 | -1에 가까움 | 하나가 크면 다른 하나는 작다 |
 | 0 근처 | 직선 관계가 없다 |
 
-- 대략적인 기준: |r| 0.7 이상 강함, 0.3 ~ 0.7 중간, 0.3 미만 약함.
+- 대략적인 기준: |r| 0.7 이상 강함, 0.3 \~ 0.7 중간, 0.3 미만 약함.
 - `df[cols].corr()`로 상관행렬을 구한다.
 
 ### 주의
@@ -407,7 +407,7 @@ df["name"].str.len()              # 글자 수(공백 포함)
 
 ## 이 과제에서는
 - `correlation(columns, method="pearson")`이 상관행렬을 만든다.
-- price - img_mean이 -0.80이다. 카테고리 안에서만 다시 계산해도 -0.76 ~ -0.96으로 유지되어 카테고리 때문에 생긴 착시가 아님을 확인했다.
+- price - img_mean이 -0.80이다. 카테고리 안에서만 다시 계산해도 -0.76 \~ -0.96으로 유지되어 카테고리 때문에 생긴 착시가 아님을 확인했다.
 - price - rating은 -0.14로 거의 관계없다.
 - frequency - monetary는 고객 단위로 0.78이다. 자주 사는 고객이 돈도 많이 쓴다는 RFM의 전제를 데이터로 확인한 것이다.
 
@@ -518,7 +518,7 @@ plt.show()
 - 세그먼트(Segment): 비슷한 특성의 고객을 묶은 그룹이다. 이 과제는 VIP, Loyal, New, Regular, At Risk, Churned 6개다.
 
 ### 점수 매기기
-- 고객을 지표별로 줄 세워 5등분하고 1~5점을 준다. 분위수로 자르는 `pd.qcut`을 쓴다.
+- 고객을 지표별로 줄 세워 5등분하고 1\~5점을 준다. 분위수로 자르는 `pd.qcut`을 쓴다.
 - 동점이 많으면 경계가 겹쳐 `qcut`이 실패한다. `rank(method="first")`로 순위를 먼저 매겨 동점을 없앤다.
 - R은 작을수록 좋으므로 부호를 바꿔(`-recency`) 순위를 매겨야 최근 고객이 5점이 된다.
 
@@ -540,7 +540,7 @@ segment = np.select(conditions, choices, default="Regular")          # 처음 �
 - 과제가 4개 이상 그룹, 기준일 = 최종 거래일을 요구한다.
 
 ## 이 과제에서는
-- `calculate_rfm()`이 고객 1,000명의 R, F, M 값과 1~5점을 만든다. 기준일은 2025-12-31이다.
+- `calculate_rfm()`이 고객 1,000명의 R, F, M 값과 1\~5점을 만든다. 기준일은 2025-12-31이다.
 - `segment_customers()`가 규칙을 위에서부터 먼저 맞는 것으로 적용한다. VIP는 R>=4, F>=4, M>=4, Loyal은 R>=3, F>=3, New는 R>=4, F<=2, At Risk는 R<=2, F>=3, Churned는 R<=2, F<=2, 나머지는 Regular다.
 - `segment_summary()`로 VIP 218명(21.8%)이 매출의 62.5%를 만든다는 결과를 얻었다.
 
@@ -587,7 +587,7 @@ months_since = (order_year * 12 + order_month) - (cohort_year * 12 + cohort_mont
 - "검증" 항목은 내 결론이 틀릴 수 있다는 것을 스스로 짚는 연습이다. 예를 들어 매출이 크다고 이익이 큰 것은 아니다.
 
 ## 이 과제에서는
-- README의 인사이트 4개: VIP 매출 집중, At Risk 복귀, 신규 고객 3개월 이탈, 11~12월 성수기.
+- README의 인사이트 4개: VIP 매출 집중, At Risk 복귀, 신규 고객 3개월 이탈, 11\~12월 성수기.
 - 각 인사이트는 RFM 표와 코호트, 월별 매출 차트의 수치를 근거로 쓴다.
 
 <br>
