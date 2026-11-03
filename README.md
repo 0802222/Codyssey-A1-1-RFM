@@ -141,8 +141,6 @@ Codyssey-A1-1-RFM/
 
 ## 1.5 실행 방법
 
-### 1.5.1 한 번에 실행 (시연)
-
 가상환경을 만들고 시연 스크립트를 실행하는 명령어:
 
 ```bash
@@ -155,30 +153,8 @@ python3.11 -m venv .venv
 ./demo.sh --no-nb    # 노트북 재실행만 생략
 ```
 
-`demo.sh`가 순서대로 하는 일을 정리한 표:
-
-| 단계 | 하는 일 |
-|---|---|
-| 0 | 실행 환경과 라이브러리 버전 출력 |
-| 1 | 금지 라이브러리 `import` 여부 검사 (`grep`) |
-| 2 | 단위 테스트 31개 실행 |
-| 3 | 합성 데이터 생성 (시드 42) |
-| 4 | `src/pipeline.py` 실행, 결과를 터미널에 출력 |
-| 5 | 노트북 재실행, 차트를 `docs/figures/`에 저장 (`--no-nb`면 생략) |
-
-### 1.5.2 단계별 실행
-
-`demo.sh`를 쓰지 않고 한 단계씩 직접 실행하는 명령어:
-
-```bash
-.venv/bin/python data/generate_data.py                 # 데이터 생성 (data/orders.csv, data/products.csv)
-.venv/bin/python -m unittest discover -s tests -v      # 단위 테스트
-.venv/bin/python -m src.pipeline                       # 파이프라인 실행, 결과를 터미널에 출력
-cd notebooks && ../.venv/bin/python -m nbconvert --to notebook --execute --inplace analysis_report.ipynb
-```
-
+- `demo.sh`의 단계별 동작과 한 단계씩 직접 실행하는 명령어는 [docs/run_guide.md](docs/run_guide.md)에 있다.
 - `Python 3.10` 이상에서 동작한다. (개발 환경: `Python 3.11.4`, macOS)
-- `Python 3.8`은 수명 종료(EOL)라 VS Code Jupyter 확장이 지원하지 않는다. 3.8로 만든 `.venv`는 지우고 다시 만든다.
 
 <br>
 <br>
@@ -281,89 +257,31 @@ flowchart LR
 - 고정 시드(`seed=42`)를 쓰므로 누가 실행해도 같은 데이터가 나온다.
 - 합성 데이터를 고른 이유: 공개 데이터 중 "상품 이미지 배열 + 고객별 거래 기록"을 함께 가진 데이터가 드물고, 과제 조건(결측치, 이상치, 여러 데이터 유형)을 한 데이터셋에서 모두 검증하기 위해서다.
 
-### 3.2.2 데이터 항목(컬럼) 설명
-
-주문 파일과 상품 파일을 합친 표의 항목 13개를 유형별로 묶은 설명표:
-
-<table>
-<thead>
-<tr><th>유형</th><th>컬럼</th><th>출처 파일</th><th>설명</th></tr>
-</thead>
-<tbody>
-<tr><td rowspan="3">식별자</td><td><code>order_id</code></td><td>주문</td><td>주문 번호</td></tr>
-<tr><td><code>customer_id</code></td><td>주문</td><td>고객 번호 (<code>RFM</code> 기준)</td></tr>
-<tr><td><code>product_id</code></td><td>주문, 상품</td><td>상품 번호 (두 파일을 합치는 키)</td></tr>
-<tr><td rowspan="2">날짜형</td><td><code>order_date</code></td><td>주문</td><td>주문일 (<code>Recency</code> 기준)</td></tr>
-<tr><td><code>registered_date</code></td><td>상품</td><td>상품 등록일</td></tr>
-<tr><td rowspan="3">수치형</td><td><code>quantity</code></td><td>주문</td><td>주문 수량</td></tr>
-<tr><td><code>price</code></td><td>상품</td><td>상품 가격(원). 결측치 7.2%</td></tr>
-<tr><td><code>rating</code></td><td>상품</td><td>상품 평점(1~5). 결측치 11.0%</td></tr>
-<tr><td rowspan="3">범주형</td><td><code>region</code></td><td>주문</td><td>고객 지역 (7개)</td></tr>
-<tr><td><code>payment_method</code></td><td>주문</td><td>결제 수단 (4개)</td></tr>
-<tr><td><code>category</code></td><td>상품</td><td>상품 카테고리 (6개)</td></tr>
-<tr><td>텍스트</td><td><code>product_name</code></td><td>상품</td><td>상품명</td></tr>
-<tr><td>이미지 배열</td><td><code>image_pixels</code></td><td>상품</td><td>16x16x3 = 768개 픽셀 값을 공백으로 이은 문자열</td></tr>
-</tbody>
-</table>
-
-- 주문 금액 `amount`는 파이프라인에서 `price x quantity`로 만든다.
-- `Recency` 기준일은 데이터의 마지막 거래일인 2025-12-31이다.
-
-### 3.2.3 합성 데이터를 만든 규칙
-- 고객은 5가지 행동 유형(VIP형, 충성형, 일반형, 신규형, 이탈형)으로 만들고, 유형마다 활동 기간과 주문 횟수를 다르게 줬다.
-- 11~12월에는 주문 확률을 1.8배로 높였다.
-- 전체 주문의 약 1.5%(`Food`, `Books`는 추가 2%)를 10~30개 대량 주문으로 만들어 이상치를 넣었다.
-- 이미지는 카테고리별 기본색 + 그라데이션 + 노이즈로 만들고, 비싼 상품일수록 어둡게 했다.
-- 분석 결과의 패턴은 이 규칙에서 나온 것이다. 파이프라인이 숨겨진 패턴을 제대로 찾아내는지 확인하는 용도이며, 실제 데이터에 적용할 때는 다시 검증해야 한다.
+### 3.2.2 데이터 항목(컬럼)과 합성 규칙
+- 주문 파일과 상품 파일을 합친 표는 13개 컬럼이다. 수치형, 범주형, 날짜형, 텍스트, 이미지 배열 5가지 유형이 들어 있다.
+- 주문 금액 `amount`는 파이프라인에서 `price x quantity`로 만든다. `Recency` 기준일은 데이터의 마지막 거래일인 2025-12-31이다.
+- 결측치는 `price` 7.2%, `rating` 11.0%이고, 이상치는 전체 주문의 약 1.5%를 10~30개 대량 주문으로 넣었다.
+- 분석 결과의 패턴은 생성 규칙에서 나온 것이다. 파이프라인이 숨겨진 패턴을 제대로 찾는지 확인하는 용도이며, 실제 데이터에 적용할 때는 다시 검증해야 한다.
+- 컬럼별 설명표와 생성 규칙 전체는 [docs/data_description.md](docs/data_description.md)에 있다.
 
 ## 3.3 분석 클래스 `DataAnalyzer` 구성
 
-절차형 스크립트가 아닌 클래스로 만들었다. 데이터(`self.df`, `self.rfm`)를 객체 안에 두고 메서드를 순서대로 호출한다. 주요 설정값은 모두 인자로 받는다.
+절차형 스크립트가 아닌 클래스로 만들었다. 데이터(`self.df`, `self.rfm`)를 객체 안에 두고 메서드를 순서대로 호출한다. 주요 설정값은 모두 인자로 받는다. 메서드별 주요 인자와 호출 예시는 [docs/dataanalyzer_api.md](docs/dataanalyzer_api.md)에 있다.
 
-`DataAnalyzer`의 메서드를 단계별로 정리한 메서드 목록표:
+`DataAnalyzer`의 메서드 18개를 처리 단계별로 묶은 목록표:
 
-<table>
-<thead>
-<tr><th>단계</th><th>메서드</th><th>주요 인자</th><th>하는 일</th></tr>
-</thead>
-<tbody>
-<tr><td>로드</td><td><code>load_data()</code></td><td><code>date_cols</code>, <code>merge_key</code></td><td>주문 CSV와 상품 CSV를 읽고 합친다</td></tr>
-<tr><td rowspan="2">결측치</td><td><code>missing_report()</code></td><td></td><td>컬럼별 결측 개수, 비율</td></tr>
-<tr><td><code>handle_missing_values()</code></td><td><code>strategy</code>, <code>group_col</code>, <code>columns</code></td><td><code>group_median</code>, <code>group_mean</code>, <code>mean</code>, <code>median</code>, <code>mode</code>, <code>drop</code></td></tr>
-<tr><td rowspan="3">이상치</td><td><code>get_iqr_bounds()</code></td><td><code>column</code>, <code>threshold=1.5</code></td><td><code>IQR</code> 정상 범위 계산</td></tr>
-<tr><td><code>detect_outliers()</code></td><td><code>column</code>, <code>threshold=1.5</code></td><td>범위 밖 행 반환</td></tr>
-<tr><td><code>handle_outliers()</code></td><td><code>column</code>, <code>threshold</code>, <code>method</code></td><td><code>clip</code>(경계값으로 바꾸기) 또는 <code>remove</code>(삭제)</td></tr>
-<tr><td rowspan="3">이미지</td><td><code>parse_images()</code></td><td><code>shape</code>, <code>step</code></td><td>문자열 → <code>(N, H, W, C)</code> 배열, <code>arr[:, ::step, ::step]</code> 다운샘플링</td></tr>
-<tr><td><code>add_image_features()</code></td><td><code>shape</code>, <code>step</code></td><td><code>img_mean</code>, <code>img_std</code></td></tr>
-<tr><td><code>add_image_advanced_features()</code></td><td><code>bins</code></td><td>밝기 히스토그램 <code>img_hist_*</code>, 엣지 강도 <code>img_edge</code> (보너스 1)</td></tr>
-<tr><td>텍스트</td><td><code>add_text_features()</code></td><td><code>text_col</code></td><td><code>name_word_count</code>, <code>name_length</code></td></tr>
-<tr><td>파생</td><td><code>add_amount()</code></td><td><code>price_col</code>, <code>qty_col</code></td><td><code>amount = price x quantity</code></td></tr>
-<tr><td rowspan="2">통계</td><td><code>summary_statistics()</code></td><td><code>columns</code></td><td>평균, 중앙값, 표준편차, 최소, <code>Q1</code>, <code>Q3</code>, 최대, <code>IQR</code></td></tr>
-<tr><td><code>correlation()</code></td><td><code>columns</code>, <code>method</code></td><td>상관계수 행렬</td></tr>
-<tr><td rowspan="3">RFM</td><td><code>calculate_rfm()</code></td><td><code>customer_col</code>, <code>date_col</code>, <code>amount_col</code>, <code>reference_date</code>, <code>order_col</code>, <code>n_bins</code></td><td><code>R</code>, <code>F</code>, <code>M</code> 값과 1~5점</td></tr>
-<tr><td><code>segment_customers()</code></td><td></td><td>점수 규칙으로 6개 세그먼트</td></tr>
-<tr><td><code>segment_summary()</code></td><td></td><td>세그먼트별 고객 수, 평균 <code>R</code>/<code>F</code>/<code>M</code>, 매출 비중</td></tr>
-<tr><td>시계열</td><td><code>monthly_sales()</code></td><td><code>date_col</code>, <code>amount_col</code></td><td>월별 매출</td></tr>
-<tr><td>코호트</td><td><code>cohort_retention()</code></td><td><code>customer_col</code>, <code>date_col</code></td><td>첫 구매 월별 재구매율 (보너스 2)</td></tr>
-</tbody>
-</table>
-
-`DataAnalyzer`를 처음부터 끝까지 호출하는 사용 예시 코드:
-
-```python
-from src.pipeline import DataAnalyzer
-
-analyzer = DataAnalyzer("data/orders.csv", product_path="data/products.csv")
-analyzer.load_data(date_cols=["order_date", "registered_date"])
-analyzer.handle_missing_values(strategy="group_median", group_col="category", columns=["price", "rating"])
-analyzer.add_amount("price", "quantity")
-analyzer.add_image_features("image_pixels", shape=(16, 16, 3))
-analyzer.add_text_features("product_name")
-outliers = analyzer.detect_outliers("amount", threshold=1.5)
-analyzer.calculate_rfm("customer_id", "order_date", "amount", order_col="order_id")
-analyzer.segment_customers()
-print(analyzer.segment_summary())
-```
+| 단계 | 메서드 |
+|---|---|
+| 로드 | `load_data()` |
+| 결측치 | `missing_report()`, `handle_missing_values()` |
+| 이상치 | `get_iqr_bounds()`, `detect_outliers()`, `handle_outliers()` |
+| 이미지 | `parse_images()`, `add_image_features()`, `add_image_advanced_features()` |
+| 텍스트 | `add_text_features()` |
+| 파생 | `add_amount()` |
+| 통계 | `summary_statistics()`, `correlation()` |
+| RFM | `calculate_rfm()`, `segment_customers()`, `segment_summary()` |
+| 시계열 | `monthly_sales()` |
+| 코호트 | `cohort_retention()` |
 
 ## 3.4 분석 과정과 결과
 
@@ -416,14 +334,9 @@ flowchart LR
 
 ### 3.4.4 통계와 상관관계
 
-주요 수치 변수 4개의 기술통계표 (평균, 중앙값, 표준편차, 사분위수):
-
-| 변수 | 평균 | 중앙값 | 표준편차 | `Q1` | `Q3` | 시사점 |
-|---|---|---|---|---|---|---|
-| `price` | 72,975 | 35,500 | 87,933 | 21,500 | 81,400 | 평균이 중앙값의 2배 이상이다. 비싼 상품 몇 개가 평균을 끌어올려서 대표값은 중앙값이 맞다 |
-| `quantity` | 1.72 | 1 | 2.82 | 1 | 2 | 주문의 75%가 1~2개이고, 소수의 대량 주문이 평균과 표준편차를 키운다 |
-| `amount` | 118,254 | 48,600 | 299,433 | 26,825 | 124,200 | 표준편차가 평균의 2배 이상이다. 금액 차이가 매우 커서 이상치 확인이 필요하다 |
-| `rating` | 4.08 | 4.10 | 0.43 | 3.90 | 4.30 | 가운데 50%가 3.9~4.3에 몰려 있어 평점으로는 상품을 구분하기 어렵다 |
+- `price`, `amount`는 평균이 중앙값의 2배 이상이다. 비싼 상품과 대량 주문 몇 건이 평균을 끌어올리므로 대표값은 중앙값이 맞다. (`price` 평균 72,975 / 중앙값 35,500, `amount` 평균 118,254 / 중앙값 48,600)
+- `rating`은 가운데 50%가 3.9~4.3에 몰려 있어 평점으로는 상품을 구분하기 어렵다.
+- 4개 변수 전체 기술통계표는 [docs/analysis_results.md](docs/analysis_results.md#1-기술통계)에 있다.
 
 변수 5쌍의 상관계수와 해석표:
 
@@ -436,18 +349,7 @@ flowchart LR
 | `frequency` - `monetary` (고객 단위) | 0.78 | 자주 사는 고객이 돈도 많이 쓴다 |
 
 ### 3.4.5 시각화 6종
-
-과제가 요구한 차트 6종의 내용과 노트북 위치표:
-
-| 차트 | 내용 | 위치 |
-|---|---|---|
-| 히스토그램 | 가격, 평점, 이미지 밝기 분포 / 이상치 처리 전후 금액 분포 | 노트북 4장, 5장 |
-| 박스플롯 | 이상치 처리 전후 비교 | 노트북 4장 |
-| 막대그래프 | 카테고리별 주문 수와 매출 / `RFM` 세그먼트별 고객 수와 매출 비중 | 노트북 6장, 7장 |
-| 히트맵 | 상관행렬 / `R` x `F` 점수 고객 분포 / 코호트 재구매율 | 노트북 5장, 7장, 8장 |
-| 산점도 | 가격과 이미지 밝기 | 노트북 5장 |
-| 라인차트 | 월별 매출 추이 | 노트북 6장 |
-
+- 히스토그램, 박스플롯, 막대그래프, 히트맵, 산점도, 라인차트 6종을 [노트북](notebooks/analysis_report.ipynb) 4~8장에 그렸다. 차트별 내용과 위치는 [docs/analysis_results.md](docs/analysis_results.md#2-시각화-6종)에 있다.
 - 모든 차트에 제목과 축 레이블을 넣었다. 그림 파일은 [docs/figures/](docs/figures/)에 있다.
 - 보너스로 `Plotly` 인터랙티브 차트 2종을 더 만들었다. ([4.3 보너스 과제](#43-보너스-과제-수행-결과))
 
@@ -533,11 +435,11 @@ flowchart LR
 | 요구사항 | 결과 | 확인 위치 |
 |---|---|---|
 | 1,000건 이상, 8개 컬럼 이상 | 5,160건, 13개 컬럼 | `data/orders.csv`, `data/products.csv` |
-| 수치, 범주, 날짜, 이미지 중 3가지 이상 | 5가지 (텍스트 포함) | 3.2.2 데이터 항목 설명 |
+| 수치, 범주, 날짜, 이미지 중 3가지 이상 | 5가지 (텍스트 포함) | [3.2.2](#322-데이터-항목컬럼과-합성-규칙), [데이터 설명](docs/data_description.md) |
 | `info()`, `describe()`, `head()`와 해석 | 실행하고 해석함 | 노트북 1장 |
 | `RFM`용 `customer_id`, `order_date`, `amount` | 모두 있음 | `add_amount()` |
 | `Recency` 기준일 = 최종 거래일 | 2025-12-31 | `calculate_rfm(reference_date=None)` |
-| 데이터 출처 | 합성 데이터, 생성 규칙 공개 | 3.2.1, 3.2.3 |
+| 데이터 출처 | 합성 데이터, 생성 규칙 공개 | 3.2.1, [합성 규칙](docs/data_description.md#2-합성-데이터를-만든-규칙) |
 
 ## 4.2 사용 제한 라이브러리 준수 결과
 
