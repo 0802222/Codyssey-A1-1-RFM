@@ -102,6 +102,7 @@ flowchart LR
 <tr><td>분석 환경</td><td><code>Jupyter Notebook</code></td><td><a href="notebooks/analysis_report.ipynb">analysis_report.ipynb</a> : 분석 과정과 차트, 해석 정리</td></tr>
 <tr><td rowspan="2">검증과 자동화</td><td><code>unittest</code></td><td><a href="tests/test_pipeline.py">test_pipeline.py</a> : 메서드 동작 테스트 31개</td></tr>
 <tr><td><code>Shell</code> 스크립트</td><td><a href="demo.sh">demo.sh</a> : 금지 라이브러리 검사부터 노트북 실행까지</td></tr>
+<tr><td>코딩 컨벤션 (<code>PEP8</code>)</td><td><code>black</code>, <code>isort</code>, <code>ruff</code>, <code>mypy</code></td><td><code>black</code> : <a href="pyproject.toml">pyproject.toml</a> / 코드 모양을 88자 기준으로 자동 정리<br><code>isort</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>import</code> 순서를 <code>black</code>과 같은 규칙으로 정리<br><code>ruff</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>PEP8</code>(<code>E</code>, <code>W</code>), 안 쓰는 코드(<code>F</code>), 이름 규칙(<code>N</code>), <code>docstring</code>(<code>D</code>) 위반 검사<br><code>mypy</code> : <a href="pyproject.toml">pyproject.toml</a> / 함수 인자와 반환값의 타입 힌트 검사</td></tr>
 </tbody>
 </table>
 
@@ -114,6 +115,8 @@ Codyssey-A1-1-RFM/
 ├── README.md
 ├── study.md                     # 과제 개념 정리
 ├── requirements.txt             # 설치할 패키지 목록
+├── requirements-dev.txt         # 코드 검사 도구 목록 (black, isort, ruff, mypy)
+├── pyproject.toml               # 코딩 컨벤션 도구 설정
 ├── demo.sh                      # 시연 스크립트
 ├── data/
 │   ├── generate_data.py         # 합성 데이터 생성 (seed=42)
@@ -153,6 +156,17 @@ python3.11 -m venv .venv
 ./demo.sh --no-nb    # 노트북 재실행만 생략
 ```
 
+코딩 컨벤션(`PEP8`)을 검사하는 명령어. 4개 모두 통과한 상태이며, 코드를 고치면 같은 순서로 다시 돌린다:
+
+```bash
+.venv/bin/pip install -r requirements-dev.txt                        # 검사 도구 설치 (처음 한 번)
+.venv/bin/black --check src tests data/generate_data.py              # 코드 모양이 규칙에 맞는지 검사 (--check를 빼면 자동 수정)
+.venv/bin/isort --check src tests data/generate_data.py              # import 순서 검사
+.venv/bin/ruff check src tests data/generate_data.py                 # PEP8, 미사용 코드, docstring 검사
+.venv/bin/mypy src tests data/generate_data.py                       # 타입 힌트 검사
+```
+
+- 줄 길이는 88자다. 한 줄마다 단 설명 주석이 길어지면 코드 윗줄로 옮겨 적는다.
 - `demo.sh`의 단계별 동작과 한 단계씩 직접 실행하는 명령어는 [docs/run_guide.md](docs/run_guide.md)에 있다.
 - `Python 3.10` 이상에서 동작한다. (개발 환경: `Python 3.11.4`, macOS)
 
