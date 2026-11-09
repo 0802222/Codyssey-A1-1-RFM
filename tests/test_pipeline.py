@@ -19,10 +19,10 @@ from src.pipeline import DataAnalyzer  # noqa: E402  # 테스트할 분석 클�
 
 
 # 이미지 배열을 CSV에 들어가는 문자열로 바꾸는 도우미
-def image_to_str(arr: np.ndarray) -> str:
+def image_to_str(image_array: np.ndarray) -> str:
     """NumPy 배열을 CSV에 저장하는 형식(공백 구분 문자열)으로 바꾼다."""
     # 1차원으로 펴서 숫자를 공백으로 잇는다
-    return " ".join(map(str, arr.ravel().tolist()))
+    return " ".join(map(str, image_array.ravel().tolist()))
 
 
 # 파일 없이 표를 바로 넣은 분석기를 만드는 도우미
@@ -35,7 +35,7 @@ def make_analyzer(df: pd.DataFrame) -> DataAnalyzer:
 
 class TestLoadData(unittest.TestCase):  # 데이터 불러오기 테스트 모음
     def setUp(self) -> None:  # 테스트마다 먼저 실행되는 준비 단계
-        self.tmp = tempfile.TemporaryDirectory()  # 임시 폴더를 만든다
+        self.temp_dir = tempfile.TemporaryDirectory()  # 임시 폴더를 만든다
         orders = pd.DataFrame(
             {  # 가짜 주문 표
                 "order_id": [1, 2, 3],  # 주문 번호
@@ -58,14 +58,14 @@ class TestLoadData(unittest.TestCase):  # 데이터 불러오기 테스트 모�
             }
         )
         # 임시 주문 파일 경로
-        self.orders_path = os.path.join(self.tmp.name, "orders.csv")
+        self.orders_path = os.path.join(self.temp_dir.name, "orders.csv")
         # 임시 상품 파일 경로
-        self.products_path = os.path.join(self.tmp.name, "products.csv")
+        self.products_path = os.path.join(self.temp_dir.name, "products.csv")
         orders.to_csv(self.orders_path, index=False)  # 주문 표를 CSV로 저장한다
         products.to_csv(self.products_path, index=False)  # 상품 표를 CSV로 저장한다
 
     def tearDown(self) -> None:  # 테스트마다 끝나고 실행되는 정리 단계
-        self.tmp.cleanup()  # 임시 폴더를 지운다
+        self.temp_dir.cleanup()  # 임시 폴더를 지운다
 
     def test_load_single_file(self) -> None:  # 주문 파일 하나만 읽는 경우
         df = DataAnalyzer(self.orders_path).load_data()  # 주문 파일만 읽는다
@@ -161,11 +161,17 @@ class TestOutliers(unittest.TestCase):  # 이상치 처리 테스트 모음
 
     def test_iqr_bounds(self) -> None:  # IQR 정상 범위 계산 테스트
         # 메서드로 범위를 구한다
-        lower, upper = make_analyzer(self.df).get_iqr_bounds("amount", threshold=1.5)
+        lower_bound, upper_bound = make_analyzer(self.df).get_iqr_bounds(
+            "amount", threshold=1.5
+        )
         q1, q3 = self.df["amount"].quantile([0.25, 0.75])  # 직접 Q1, Q3를 구한다
         iqr = q3 - q1  # 직접 IQR을 구한다
-        self.assertAlmostEqual(lower, q1 - 1.5 * iqr)  # 하한이 손계산과 같아야 한다
-        self.assertAlmostEqual(upper, q3 + 1.5 * iqr)  # 상한이 손계산과 같아야 한다
+        self.assertAlmostEqual(
+            lower_bound, q1 - 1.5 * iqr
+        )  # 하한이 손계산과 같아야 한다
+        self.assertAlmostEqual(
+            upper_bound, q3 + 1.5 * iqr
+        )  # 상한이 손계산과 같아야 한다
 
     def test_detect_outliers(self) -> None:  # 이상치 찾기 테스트
         # 이상치 행을 찾는다
@@ -181,12 +187,12 @@ class TestOutliers(unittest.TestCase):  # 이상치 처리 테스트 모음
 
     def test_handle_outliers_clip(self) -> None:  # 경계값으로 자르기 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
-        _, upper = analyzer.get_iqr_bounds("amount")  # 상한만 필요하다
+        _, upper_bound = analyzer.get_iqr_bounds("amount")  # 상한만 필요하다
         # 범위 밖 값을 경계값으로 자른다
         analyzer.handle_outliers("amount", method="clip")
         self.assertEqual(len(analyzer.df), 11)  # 행 수는 그대로여야 한다
         # 최대값이 상한으로 잘려 있어야 한다
-        self.assertAlmostEqual(analyzer.df["amount"].max(), upper)
+        self.assertAlmostEqual(analyzer.df["amount"].max(), upper_bound)
 
     def test_handle_outliers_remove(self) -> None:  # 이상치 행 삭제 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
@@ -208,7 +214,7 @@ class TestFeatureEngineering(unittest.TestCase):  # 이미지, 텍스트 피처 
                     "Tea",
                 ],  # 상품명
                 # 이미지를 문자열로 바꿔 넣는다
-                "image_pixels": [image_to_str(img) for img in self.images],
+                "image_pixels": [image_to_str(image) for image in self.images],
                 "price": [10.0, 20.0, 30.0],  # 가격
                 "quantity": [1, 2, 3],  # 수량
             }
@@ -216,41 +222,53 @@ class TestFeatureEngineering(unittest.TestCase):  # 이미지, 텍스트 피처 
 
     def test_parse_images_shape(self) -> None:  # 문자열을 배열로 되돌리는 테스트
         # 문자열을 이미지 배열로 바꾼다
-        arr = make_analyzer(self.df).parse_images("image_pixels", shape=(4, 4, 3))
+        parsed_images = make_analyzer(self.df).parse_images(
+            "image_pixels", image_shape=(4, 4, 3)
+        )
         # 모양이 (이미지 수, 4, 4, 3)이어야 한다
-        self.assertEqual(arr.shape, (3, 4, 4, 3))
+        self.assertEqual(parsed_images.shape, (3, 4, 4, 3))
         # 원래 이미지와 값이 완전히 같아야 한다
-        np.testing.assert_array_equal(arr, self.images)
+        np.testing.assert_array_equal(parsed_images, self.images)
 
     def test_parse_images_downsample(self) -> None:  # 이미지 줄이기 테스트
         # 2칸마다 1칸씩 뽑는다
-        arr = make_analyzer(self.df).parse_images(
-            "image_pixels", shape=(4, 4, 3), step=2
+        parsed_images = make_analyzer(self.df).parse_images(
+            "image_pixels", image_shape=(4, 4, 3), downsample_step=2
         )
-        self.assertEqual(arr.shape, (3, 2, 2, 3))  # 4x4가 2x2로 줄어야 한다
+        self.assertEqual(parsed_images.shape, (3, 2, 2, 3))  # 4x4가 2x2로 줄어야 한다
         # 직접 슬라이싱한 결과와 같아야 한다
-        np.testing.assert_array_equal(arr, self.images[:, ::2, ::2, :])
+        np.testing.assert_array_equal(parsed_images, self.images[:, ::2, ::2, :])
 
     def test_image_mean_std(self) -> None:  # 이미지 평균, 표준편차 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
         # 평균, 표준편차 컬럼을 추가한다
-        analyzer.add_image_features("image_pixels", shape=(4, 4, 3))
-        for i, img in enumerate(self.images):  # 이미지를 하나씩 확인한다
+        analyzer.add_image_features("image_pixels", image_shape=(4, 4, 3))
+        for row_number, image in enumerate(self.images):  # 이미지를 하나씩 확인한다
             # 평균이 NumPy 계산과 같아야 한다
-            self.assertAlmostEqual(analyzer.df.loc[i, "img_mean"], img.mean())
+            self.assertAlmostEqual(
+                analyzer.df.loc[row_number, "image_brightness_mean"], image.mean()
+            )
             # 표준편차도 같아야 한다
-            self.assertAlmostEqual(analyzer.df.loc[i, "img_std"], img.std())
+            self.assertAlmostEqual(
+                analyzer.df.loc[row_number, "image_brightness_std"], image.std()
+            )
 
     def test_image_advanced_features(self) -> None:  # 밝기 비율, 엣지 컬럼 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
         # 4구간으로 나눠 컬럼을 추가한다
-        analyzer.add_image_advanced_features("image_pixels", shape=(4, 4, 3), bins=4)
-        hist_cols = [f"img_hist_{i}" for i in range(4)]  # 기대하는 비율 컬럼 이름 4개
-        for col in hist_cols + ["img_edge"]:  # 비율 컬럼과 엣지 컬럼을
-            self.assertIn(col, analyzer.df.columns)  # 모두 만들어졌는지 확인한다
+        analyzer.add_image_advanced_features(
+            "image_pixels", image_shape=(4, 4, 3), n_brightness_bins=4
+        )
+        ratio_columns = [
+            f"image_brightness_bin_{bin_number}_ratio" for bin_number in range(4)
+        ]  # 기대하는 비율 컬럼 이름 4개
+        for column in ratio_columns + [
+            "image_edge_strength"
+        ]:  # 비율 컬럼과 엣지 컬럼을
+            self.assertIn(column, analyzer.df.columns)  # 모두 만들어졌는지 확인한다
         # 히스토그램 비율의 합은 1
         # 구간별 비율을 더하면 1이어야 한다
-        np.testing.assert_allclose(analyzer.df[hist_cols].sum(axis=1), 1.0)
+        np.testing.assert_allclose(analyzer.df[ratio_columns].sum(axis=1), 1.0)
 
     # 단색 이미지는 엣지가 없어야 한다
     def test_edge_is_zero_for_flat_image(self) -> None:
@@ -259,9 +277,9 @@ class TestFeatureEngineering(unittest.TestCase):  # 이미지, 텍스트 피처 
         # 그 이미지로 분석기를 만든다
         analyzer = make_analyzer(pd.DataFrame({"image_pixels": [image_to_str(flat)]}))
         # 엣지 컬럼을 추가한다
-        analyzer.add_image_advanced_features("image_pixels", shape=(4, 4, 3))
+        analyzer.add_image_advanced_features("image_pixels", image_shape=(4, 4, 3))
         # 이웃 픽셀 차이가 없으니 0이어야 한다
-        self.assertEqual(analyzer.df.loc[0, "img_edge"], 0.0)
+        self.assertEqual(analyzer.df.loc[0, "image_edge_strength"], 0.0)
 
     def test_text_features(self) -> None:  # 상품명 단어 수, 글자 수 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
@@ -289,8 +307,8 @@ class TestStatistics(unittest.TestCase):  # 통계 테스트 모음
         # x의 요약 통계를 구한다
         summary = make_analyzer(self.df).summary_statistics(["x"])
         # 있어야 할 통계 이름들을
-        for col in ["mean", "median", "std", "q1", "q3", "iqr"]:
-            self.assertIn(col, summary.columns)  # 하나씩 확인한다
+        for column in ["mean", "median", "std", "q1", "q3", "iqr"]:
+            self.assertIn(column, summary.columns)  # 하나씩 확인한다
         self.assertEqual(summary.loc["x", "median"], 3.0)  # 1~5의 중앙값은 3
         self.assertEqual(summary.loc["x", "q1"], 2.0)  # 25% 지점은 2
         self.assertEqual(summary.loc["x", "iqr"], 2.0)  # Q3(4) - Q1(2) = 2
@@ -346,11 +364,11 @@ class TestRFM(unittest.TestCase):  # RFM 테스트 모음
     def test_scores_direction(self) -> None:  # 점수 방향 테스트 (좋을수록 높은 점수)
         # 3구간으로 점수를 매긴다
         rfm = make_analyzer(self.df).calculate_rfm(
-            "customer_id", "order_date", "amount", n_bins=3
+            "customer_id", "order_date", "amount", n_score_levels=3
         )
-        for col in ["r_score", "f_score", "m_score"]:  # 세 점수 컬럼을
+        for column in ["r_score", "f_score", "m_score"]:  # 세 점수 컬럼을
             # 모두 1~3 안에 있는지 확인한다
-            self.assertTrue(rfm[col].between(1, 3).all())
+            self.assertTrue(rfm[column].between(1, 3).all())
         # 최근에 산 A가 오래전에 산 B보다 R 점수가 높다
         # 최근일수록 R 점수가 높아야 한다
         self.assertGreater(rfm["r_score"]["A"], rfm["r_score"]["B"])
@@ -387,7 +405,7 @@ class TestRFM(unittest.TestCase):  # RFM 테스트 모음
     def test_segment_summary(self) -> None:  # 세그먼트 요약표 테스트
         analyzer = make_analyzer(self.df)  # 분석기를 만든다
         # RFM을 계산한다
-        analyzer.calculate_rfm("customer_id", "order_date", "amount", n_bins=3)
+        analyzer.calculate_rfm("customer_id", "order_date", "amount", n_score_levels=3)
         analyzer.segment_customers()  # 세그먼트를 나눈다
         summary = analyzer.segment_summary()  # 요약표를 만든다
         self.assertEqual(summary["customers"].sum(), 3)  # 고객 수의 합은 3명이어야 한다
