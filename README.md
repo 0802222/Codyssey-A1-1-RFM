@@ -79,7 +79,7 @@ flowchart LR
 | 해야 할 일 | 왜 필요한가 | 구현한 기술과 메서드 |
 |---|---|---|
 | 고객별 구매 기록 준비 | `RFM`은 고객, 날짜, 금액이 있어야 계산된다 | `data/generate_data.py`에서 `np.random.default_rng(42)`로 시드를 고정해 합성 데이터 생성 (주문 5,160건, 고객 1,000명) |
-| 숫자, 이미지, 텍스트를 한 표에서 분석 | 이미지와 텍스트는 숫자로 바꿔야 같은 표에서 통계를 낼 수 있다 | `Pandas`의 `read_csv`, `merge`로 두 파일을 한 표(`DataFrame`)로 합치고(`load_data()`), 이미지는 `NumPy`의 `np.fromstring`, `reshape`, `mean(axis=...)`로(`add_image_features()`), 텍스트는 `str.split`으로(`add_text_features()`) 숫자 컬럼 `img_mean`, `name_word_count`를 만든다 |
+| 숫자, 이미지, 텍스트를 한 표에서 분석 | 이미지와 텍스트는 숫자로 바꿔야 같은 표에서 통계를 낼 수 있다 | `Pandas`의 `read_csv`, `merge`로 두 파일을 한 표(`DataFrame`)로 합치고(`load_data()`), 이미지는 `NumPy`의 `np.fromstring`, `reshape`, `mean(axis=...)`로(`add_image_features()`), 텍스트는 `str.split`으로(`add_text_features()`) 숫자 컬럼 `image_brightness_mean`, `name_word_count`를 만든다 |
 | 데이터 전처리 | 빈 값과 튀는 값을 처리하지 않으면 분석이 틀어진다 | 결측치는 `groupby().transform`으로 카테고리별 중앙값 대치(`handle_missing_values()`), 이상치는 `quantile`로 `IQR` 범위를 구해 `clip`(`detect_outliers()`, `handle_outliers()`) |
 | 고객을 그룹으로 나누기 | 그룹을 나눠야 전략이 달라진다 | `pd.qcut`, `rank`로 `R`, `F`, `M` 1\~5점 계산(`calculate_rfm()`), `np.select`로 6개 세그먼트 분류(`segment_customers()`) |
 | 전략의 근거 만들기 | 전략은 수치와 차트로 뒷받침돼야 한다 | `summary_statistics()`, `correlation()`, `Matplotlib`과 `Seaborn` 차트 6종, 인사이트 4개 |
@@ -100,7 +100,7 @@ flowchart LR
 <tr><td rowspan="2">시각화</td><td><code>Matplotlib</code>, <code>Seaborn</code></td><td><code>histplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 4, 5장 / 값의 분포 보기<br><code>boxplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 4장 / 이상치 처리 전후 비교<br><code>barplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 6, 7장 / 카테고리별, 세그먼트별 비교<br><code>heatmap</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 5, 7, 8장 / 상관행렬, R x F 분포, 코호트 재구매율<br><code>scatterplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 5장 / 가격과 이미지 밝기의 관계<br><code>ax.plot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 6장 / 월별 매출 추이 선 그래프</td></tr>
 <tr><td><code>Plotly</code> (보너스)</td><td><code>px.scatter</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 9장 / 마우스를 올리면 값이 보이는 세그먼트 산점도 (고객 한 명 = 점 하나)<br><code>px.line</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 9장 / 카테고리별 월별 매출 선 그래프</td></tr>
 <tr><td>분석 환경</td><td><code>Jupyter Notebook</code></td><td><a href="notebooks/analysis_report.ipynb">analysis_report.ipynb</a> : 분석 과정과 차트, 해석 정리</td></tr>
-<tr><td rowspan="2">검증과 자동화</td><td><code>unittest</code></td><td><a href="tests/test_pipeline.py">test_pipeline.py</a> : 메서드 동작 테스트 31개</td></tr>
+<tr><td rowspan="2">검증과 자동화</td><td><code>unittest</code></td><td><a href="tests/test_pipeline.py">test_pipeline.py</a> : 메서드 동작 테스트 31개, <a href="tests/test_constants.py">test_constants.py</a> : 공통 상수 테스트 4개, <a href="tests/test_generate_data.py">test_generate_data.py</a> : 데이터 생성 함수 테스트 7개</td></tr>
 <tr><td><code>Shell</code> 스크립트</td><td><a href="demo.sh">demo.sh</a> : 금지 라이브러리 검사부터 노트북 실행까지</td></tr>
 <tr><td>코딩 컨벤션 (<code>PEP8</code>)</td><td><code>black</code>, <code>isort</code>, <code>ruff</code>, <code>mypy</code></td><td><code>black</code> : <a href="pyproject.toml">pyproject.toml</a> / 코드 모양을 88자 기준으로 자동 정리<br><code>isort</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>import</code> 순서를 <code>black</code>과 같은 규칙으로 정리<br><code>ruff</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>PEP8</code>(<code>E</code>, <code>W</code>), 안 쓰는 코드(<code>F</code>), 이름 규칙(<code>N</code>), <code>docstring</code>(<code>D</code>) 위반 검사<br><code>mypy</code> : <a href="pyproject.toml">pyproject.toml</a> / 함수 인자와 반환값의 타입 힌트 검사</td></tr>
 </tbody>
@@ -119,10 +119,12 @@ Codyssey-A1-1-RFM/
 ├── pyproject.toml               # 코딩 컨벤션 도구 설정
 ├── demo.sh                      # 시연 스크립트
 ├── data/
+│   ├── __init__.py              # data를 패키지로 만들어 -m으로 실행하게 한다
 │   ├── generate_data.py         # 합성 데이터 생성 (seed=42)
 │   ├── orders.csv               # 주문 5,160건
 │   └── products.csv             # 상품 200개 (이미지 배열 포함)
 ├── src/
+│   ├── constants.py             # 여러 파일이 같이 쓰는 공통 상수
 │   └── pipeline.py              # DataAnalyzer 클래스
 ├── notebooks/
 │   └── analysis_report.ipynb    # 분석 리포트
@@ -130,9 +132,20 @@ Codyssey-A1-1-RFM/
 │   ├── figures/                 # 노트북이 저장한 차트 이미지
 │   └── interactive/             # Plotly 인터랙티브 차트 (HTML)
 └── tests/
+    ├── test_constants.py        # 공통 상수 테스트 4개
+    ├── test_generate_data.py    # 데이터 생성 함수 테스트 7개
     └── test_pipeline.py         # 단위 테스트 31개
 ```
 
+파일 사이의 의존 흐름도:
+
+```
+data/generate_data.py -> data/*.csv -> src/pipeline.py -> notebooks/analysis_report.ipynb
+```
+
+- `data/generate_data.py`와 `src/pipeline.py`는 서로를 모른다. 둘은 CSV 파일(`data/*.csv`)로만 이어진다. 생성 스크립트가 쓰고 파이프라인이 읽는다.
+- 노트북은 `src/pipeline.py`의 `DataAnalyzer`를 가져다 쓴다. 생성 스크립트는 직접 부르지 않는다.
+- 각 파일은 바로 다음 파일에만 의존한다.
 
 | 파일 | 하는 일 | 충족하는 요구사항 |
 |---|---|---|
@@ -306,14 +319,14 @@ flowchart LR
 
 ### 3.4.2 멀티모달 피처: 반복문 없이 벡터 연산
 
-이미지 문자열이 `img_mean` 컬럼이 되는 과정을 보여주는 변환 흐름도:
+이미지 문자열이 `image_brightness_mean` 컬럼이 되는 과정을 보여주는 변환 흐름도:
 
 ```mermaid
 flowchart LR
     A["CSV 한 칸<br>숫자 768개를 공백으로 이은 문자열"] --> B["np.fromstring<br>1차원 숫자 배열"]
     B --> C["reshape<br>N, 16, 16, 3 모양"]
     C --> D["mean axis=1,2,3<br>이미지마다 숫자 1개"]
-    D --> E["img_mean 컬럼"]
+    D --> E["image_brightness_mean 컬럼"]
 ```
 
 - 이미지: 모든 행의 픽셀 문자열을 이어 `np.fromstring()`으로 한 번에 읽고 `(5160, 16, 16, 3)`으로 `reshape`했다. `images.mean(axis=(1, 2, 3))` 한 줄로 이미지별 평균을 구한다.
@@ -358,7 +371,7 @@ flowchart LR
 |---|---|---|
 | `price` - `amount` | 0.46 | 비싼 상품일수록 주문 금액이 크다 |
 | `quantity` - `amount` | 0.50 | 대량 주문이 금액 이상치를 만든다 |
-| `price` - `img_mean` | -0.80 | 비싼 상품일수록 이미지가 어둡다. 카테고리 안에서도 -0.76 \~ -0.96으로 유지된다 |
+| `price` - `image_brightness_mean` | -0.80 | 비싼 상품일수록 이미지가 어둡다. 카테고리 안에서도 -0.76 \~ -0.96으로 유지된다 |
 | `price` - `rating` | -0.14 | 거의 관계없다 |
 | `frequency` - `monetary` (고객 단위) | 0.78 | 자주 사는 고객이 돈도 많이 쓴다 |
 
@@ -457,20 +470,25 @@ flowchart LR
 
 ## 4.2 사용 제한 라이브러리 준수 결과
 
-| 항목 | 내용 |
-|---|---|
-| 허용 라이브러리만 사용 | 필수 구현은 `NumPy`, `Pandas`, `Matplotlib`, `Seaborn`만 쓴다. `Plotly`는 보너스 차트에서만 쓴다 |
-| 이미지 처리 라이브러리 금지 | `OpenCV`, `Pillow`를 쓰지 않는다. 문자열 복구는 `np.fromstring()`, 축소는 `arr[:, ::n, ::n]` |
-| ML, NLP 라이브러리 금지 | `Scikit-learn`, `NLTK`를 쓰지 않는다. `RFM` 점수는 `pd.qcut`, 단어 수는 `str.split()` |
-| 자동 EDA 금지 | `pandas-profiling`, `sweetviz`를 쓰지 않는다 |
-| 자동 검사 | `demo.sh` 1단계에서 금지 라이브러리 `import` 여부를 검사한다 |
+같은 일을 하는 쓴 라이브러리와 금지 라이브러리를 나란히 비교한 표:
+
+| 하는 일 | 사용한 라이브러리와 용도 | 금지 라이브러리와 용도 (쓰지 않음) |
+|---|---|---|
+| 이미지 처리 | `NumPy`: `np.fromstring`으로 픽셀 문자열 복구, `mean(axis=...)`로 밝기 평균, `arr[:, ::n, ::n]`으로 축소, `np.diff`로 엣지 강도 | `OpenCV`, `Pillow`: 이미지 파일 읽기, 크기 조절, 필터, 엣지 검출을 함수 하나로 처리 |
+| 머신러닝, 점수화 | `Pandas`: `pd.qcut`, `rank`로 `RFM` 1~5점 계산, `NumPy`: `np.select`로 세그먼트 분류 | `Scikit-learn`: 스케일링, 군집화(`KMeans`) 같은 완성된 모델과 전처리 도구 |
+| 텍스트(NLP) | `Pandas`: `str.split`, `str.len`으로 단어 수와 글자 수 | `NLTK`: 토큰화, 불용어 제거, 형태소 분석 등 자연어 처리 도구 |
+| 자동 EDA | `Pandas`: `info`, `describe`, `quantile`, `corr`로 직접 요약과 상관 계산, `Matplotlib`, `Seaborn`: 차트 직접 작성 | `pandas-profiling`, `sweetviz`: 데이터 한 줄 입력으로 통계와 차트 리포트를 자동 생성 |
+| 시각화 | `Matplotlib`, `Seaborn`: 필수 차트 6종, `Plotly`: 보너스 인터랙티브 차트 2종 | 금지 없음 |
+
+- `Plotly`는 보너스 차트에서만 쓴다. 필수 구현은 `NumPy`, `Pandas`, `Matplotlib`, `Seaborn`만 쓴다.
+- `demo.sh` 1단계에서 금지 라이브러리 `import` 여부를 자동으로 검사한다.
 
 ## 4.3 보너스 과제 수행 결과
 
 | 번호 | 내용 | 구현 위치 | 결과 |
 |---|---|---|---|
-| 1 | 이미지 고급 피처 | [`add_image_advanced_features()`](src/pipeline.py#L137), 노트북 3장 | 밝기 4구간 히스토그램 비율(`img_hist_0~3`), 이웃 픽셀 차이로 만든 엣지 강도(`img_edge`) |
-| 2 | 코호트 분석 | [`cohort_retention()`](src/pipeline.py#L263), 노트북 8장 | 첫 구매 월별 재구매율 히트맵 [heatmap_cohort.png](docs/figures/heatmap_cohort.png) |
+| 1 | 이미지 고급 피처 | [`add_image_advanced_features()`](src/pipeline.py#L240), 노트북 3장 | 밝기 4구간 히스토그램 비율(`image_brightness_bin_0~3_ratio`), 이웃 픽셀 차이로 만든 엣지 강도(`image_edge_strength`) |
+| 2 | 코호트 분석 | [`cohort_retention()`](src/pipeline.py#L467), 노트북 8장 | 첫 구매 월별 재구매율 히트맵 [heatmap_cohort.png](docs/figures/heatmap_cohort.png) |
 | 3 | `Plotly` 인터랙티브 차트 | 노트북 9장 | [고객 세그먼트 산점도](docs/interactive/rfm_segments_scatter.html), [카테고리별 월별 매출 라인차트](docs/interactive/monthly_revenue_by_category.html) |
 
 - 보너스 3의 HTML은 브라우저로 열면 노트북 없이 볼 수 있다. 점에 마우스를 올리면 고객 번호와 `R`, `F`, `M` 값이 보이고, 범례를 누르면 그룹을 켜고 끌 수 있다. (`plotly.js`를 CDN에서 불러오므로 인터넷이 필요하다)

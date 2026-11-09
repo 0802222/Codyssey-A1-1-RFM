@@ -13,7 +13,7 @@
 |---|---|
 | 0 | 실행 환경과 라이브러리 버전 출력 |
 | 1 | 금지 라이브러리 `import` 여부 검사 (`grep`) |
-| 2 | 단위 테스트 31개 실행 |
+| 2 | 단위 테스트 42개 실행 |
 | 3 | 합성 데이터 생성 (시드 42) |
 | 4 | `src/pipeline.py` 실행, 결과를 터미널에 출력 |
 | 5 | 노트북 재실행, 차트를 `docs/figures/`에 저장 (`--no-nb`면 생략) |
@@ -28,7 +28,7 @@
 `demo.sh`를 쓰지 않고 한 단계씩 직접 실행하는 명령어:
 
 ```bash
-.venv/bin/python data/generate_data.py                 # 데이터 생성 (data/orders.csv, data/products.csv)
+.venv/bin/python -m data.generate_data                 # 데이터 생성 (data/orders.csv, data/products.csv)
 .venv/bin/python -m unittest discover -s tests -v      # 단위 테스트
 .venv/bin/python -m src.pipeline                       # 파이프라인 실행, 결과를 터미널에 출력
 cd notebooks && ../.venv/bin/python -m nbconvert --to notebook --execute --inplace analysis_report.ipynb
