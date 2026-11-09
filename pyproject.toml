@@ -1,0 +1,32 @@
+# 코딩 컨벤션 설정: PEP8 기준, black / isort / ruff / mypy를 한 파일에서 관리한다.
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 88
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+# E/W: pycodestyle(PEP8), F: pyflakes, I: import 순서, N: 이름 규칙, D: docstring(PEP257), UP: 최신 문법
+select = ["E", "W", "F", "I", "N", "D", "UP"]
+ignore = ["D203", "D213"]  # D211, D212와 충돌하는 규칙 제외
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
+
+[tool.mypy]
+python_version = "3.11"
+warn_unused_ignores = true
+warn_return_any = true
+disallow_untyped_defs = true
+ignore_missing_imports = true
+
+[tool.ruff.lint.per-file-ignores]
+# 테스트는 함수 이름이 곧 설명이므로 docstring 규칙(D)을 적용하지 않는다
+"tests/*" = ["D"]

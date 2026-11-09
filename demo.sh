@@ -32,7 +32,7 @@ step "2. 단위 테스트"  # 2단계 제목 출력
 "$PY" -m unittest discover -s tests -v 2>&1 | tail -n 40  # 테스트를 모두 돌리고 마지막 40줄만 보여준다
 
 step "3. 데이터 생성 (고정 시드 42)"  # 3단계 제목 출력
-"$PY" data/generate_data.py  # 합성 데이터 CSV를 만든다
+"$PY" -m data.generate_data  # 합성 데이터 CSV를 만든다
 
 step "4. 분석 파이프라인 실행 (src/pipeline.py)"  # 4단계 제목 출력
 "$PY" -m src.pipeline  # 전체 분석 흐름을 실행하고 결과를 출력한다

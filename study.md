@@ -184,7 +184,7 @@ df["order_date"].dt.to_period("M")                      # 날짜를 "2025-01" �
 
 ## 이 과제에서는
 - 수치형 `price`, `quantity`, `rating`, 범주형 `category`, `region`, 날짜형 `order_date`, 텍스트 `product_name`, 이미지 `image_pixels`로 5가지 유형을 모두 썼다.
-- 이미지는 `img_mean`, `img_std`로, 텍스트는 `name_word_count`, `name_length`로 바꿨다.
+- 이미지는 `image_brightness_mean`, `image_brightness_std`로, 텍스트는 `name_word_count`, `name_length`로 바꿨다.
 - 바꾼 숫자로 "비싼 상품일수록 이미지가 어둡다(상관 -0.80)"는 관계를 찾았다.
 
 <br>
@@ -374,8 +374,8 @@ df["name"].str.len()              # 글자 수(공백 포함)
 - NLTK 같은 자연어 처리 라이브러리가 금지라서 단어 수는 `str.split()`으로 센다.
 
 ## 이 과제에서는
-- `add_image_features()` → `img_mean`, `img_std`
-- `add_image_advanced_features(bins=4)` → 밝기 4구간 비율 `img_hist_0~3`, 엣지 강도 `img_edge`
+- `add_image_features()` → `image_brightness_mean`, `image_brightness_std`
+- `add_image_advanced_features(n_brightness_bins=4)` → 밝기 4구간 비율 `image_brightness_bin_0~3_ratio`, 엣지 강도 `image_edge_strength`
 - `add_text_features()` → `name_word_count`, `name_length`
 - 결과: 카테고리별 이미지 밝기는 Electronics 71.7(가장 어두움) \~ Beauty 205.0(가장 밝음). 상품명은 평균 3.0단어, 17.9글자.
 
@@ -407,7 +407,7 @@ df["name"].str.len()              # 글자 수(공백 포함)
 
 ## 이 과제에서는
 - `correlation(columns, method="pearson")`이 상관행렬을 만든다.
-- price - img_mean이 -0.80이다. 카테고리 안에서만 다시 계산해도 -0.76 \~ -0.96으로 유지되어 카테고리 때문에 생긴 착시가 아님을 확인했다.
+- price - image_brightness_mean이 -0.80이다. 카테고리 안에서만 다시 계산해도 -0.76 \~ -0.96으로 유지되어 카테고리 때문에 생긴 착시가 아님을 확인했다.
 - price - rating은 -0.14로 거의 관계없다.
 - frequency - monetary는 고객 단위로 0.78이다. 자주 사는 고객이 돈도 많이 쓴다는 RFM의 전제를 데이터로 확인한 것이다.
 
@@ -479,7 +479,7 @@ plt.show()
 
 ## 이 과제에서는
 - `src/pipeline.py`의 `DataAnalyzer`가 `self.df`(주문+상품 합친 표)와 `self.rfm`(고객별 RFM 표)을 들고 있고, 메서드를 순서대로 호출한다.
-- 인자 예: `threshold=1.5`, `strategy="group_median"`, `group_col="category"`, `reference_date=None`, `n_bins=5`.
+- 인자 예: `threshold=1.5`, `strategy="group_median"`, `group_col="category"`, `reference_date=None`, `n_score_levels=5`.
 - 컬럼 이름도 인자(`customer_col`, `date_col`, `amount_col`)라서 다른 쇼핑몰 데이터에도 쓸 수 있다.
 
 <br>
@@ -497,7 +497,7 @@ plt.show()
 - 기준이 되는 값(예: IQR 범위, RFM 점수 방향)을 작은 데이터로 손으로 계산해 두면 구현 실수를 잡을 수 있다.
 
 ## 이 과제에서는
-- `tests/test_pipeline.py`에 31개가 있고 전부 통과한다.
+- `tests/test_pipeline.py`에 31개, `tests/test_constants.py`에 4개가 있고 전부 통과한다.
 - 결측치 대치 전략별 결과와 잘못된 전략 입력 시 에러, IQR 경계와 `threshold` 변화, `clip`과 `remove` 결과, 이미지 배열 모양과 다운샘플링, 평평한 이미지의 엣지가 0인지, RFM 값과 점수 방향, 세그먼트 규칙, 코호트 재구매율을 작은 데이터로 손계산한 값과 비교한다.
 - `demo.sh` 2단계에서 자동 실행된다.
 
@@ -556,7 +556,7 @@ segment = np.select(conditions, choices, default="Regular")          # 처음 �
 
 ```python
 # 연 x 12 + 월로 바꾸면 몇 개월 차이인지 뺄셈 한 번으로 구한다
-months_since = (order_year * 12 + order_month) - (cohort_year * 12 + cohort_month)
+months_since_first_order = (order_year * 12 + order_month) - (cohort_year * 12 + cohort_month)
 ```
 
 ## 왜 이 과제에 나오나
