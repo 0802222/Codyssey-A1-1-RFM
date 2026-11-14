@@ -126,6 +126,10 @@ print(sys.executable)
 - `data/generate_data.py`가 시드 42로 `orders.csv`(주문 5,160행)와 `products.csv`(상품 200행)를 만든다.
 - `DataAnalyzer.load_data()`가 두 파일을 `product_id`로 합쳐 13개 컬럼 표 하나로 만든다.
 - 이미지 한 장은 16 x 16 x 3 = 768개 숫자를 공백으로 이은 문자열 한 칸으로 CSV에 들어간다. (CSV 칸에는 배열을 직접 넣을 수 없다)
+- 주문 5,160행은 목표 건수가 아니라 고객 유형별 평균 주문 횟수(VIP 약 19회, 충성 약 9회, 일반 약 4회, 신규 약 1.5회, 이탈 약 2회)에서 나온 결과다. 고객당 평균 5.16회다.
+    - 주문이 1,000건이면 고객당 평균 1회라 `Frequency`로 고객이 갈리지 않는다. 월별 매출과 코호트 분석도 월 평균 약 215건(5,160건 / 24개월)이 있어야 의미가 있다.
+- 상품 등록일(`registered_date`)은 첫 주문일(2024-01-01)보다 앞서야 한다. 처음에는 등록일 범위가 주문 기간 뒤까지 걸쳐 1,411건(27.3%)이 등록 전에 주문됐고, 범위를 2023-06-01 ~ 2023-12-29로 고쳐 0건으로 만들었다.
+    - 난수를 뽑는 순서는 그대로라 `registered_date` 열만 바뀌고 주문과 분석 수치는 같다. 이 컬럼은 분석에 쓰지 않는다.
 - 일부러 넣은 특징: 결측치(price 7.2%, rating 11.0%), 대량 주문 이상치, 11\~12월 주문 증가, 고객 5가지 행동 유형. 파이프라인이 이것을 찾아내는지 확인하는 용도다.
 
 <br>
@@ -226,6 +230,7 @@ df["order_date"].dt.to_period("M")                      # 날짜를 "2025-01" �
 - 대치(Imputation): 빈 값을 다른 값으로 채우는 것이다.
 - GroupBy: 같은 그룹끼리 묶어서 계산하는 기능이다.
 - `df.isna().sum()`으로 열마다 몇 개 비었는지 센다.
+- `NaN`의 성질, `Pandas`가 결측으로 보는 값의 범위, `isna()`와 `np.isnan()`의 차이는 [README 3.3.1](README.md#331-결측치-카테고리별-중앙값으로-대치)에 정리했다.
 
 | 전략 | 방법 | 언제 |
 |---|---|---|
@@ -242,6 +247,61 @@ df["price"] = df["price"].fillna(df.groupby("category")["price"].transform("medi
 |---|---|---|
 | `groupby().agg("median")` | 그룹 수만큼 | 그룹별 요약표 |
 | `groupby().transform("median")` | 원래 행 수만큼 | 행마다 자기 그룹 값을 붙일 때 |
+
+<br>
+
+### 6.1 `NumPy`에서의 `NaN`
+
+`np.nan`의 성질을 정리한 표:
+
+| 성질 | 예 | 결과 | 주의할 점 |
+|---|---|---|---|
+| 자기 자신과도 같지 않다 | `np.nan == np.nan` | `False` | `==`로는 찾을 수 없다. `np.isnan()`을 쓴다 |
+| 계산에 퍼진다 | `np.mean([1, np.nan])` | `nan` | 하나만 섞여도 평균이 `nan`이 된다. 무시하려면 `np.nanmean()`을 쓴다 |
+| 실수에만 있다 | `np.array([1, 2, 3])[0] = np.nan` | 에러 | 정수 열에 빈칸이 있으면 열 전체가 실수로 바뀐다. `price`가 `float64`인 이유다 |
+
+### 6.2 `Pandas`는 어디까지 결측으로 보나
+
+`pd.isna()`로 직접 확인한 결과. `NaN`, `None`, `NaT`(날짜의 빈 값), `pd.NA`는 결측이고, 빈 문자열과 `0`은 아니다:
+
+| 값 | `pd.isna()` | 값 | `pd.isna()` |
+|---|---|---|---|
+| `np.nan` | `True` | `""` (빈 문자열) | `False` |
+| `None` | `True` | `"-"` (글자) | `False` |
+| `pd.NaT` | `True` | `0` | `False` |
+| `pd.NA` | `True` | | |
+
+- `read_csv()`는 빈칸, `NA`, `N/A`, `null`, `NaN` 글자를 `NaN`으로 읽는다. `-`나 `none`은 못 읽으므로 `replace("-", np.nan)`으로 바꿔야 한다.
+- `Pandas` 평균은 `NaN`을 기본으로 건너뛴다(`skipna=True`). `[1, 2, NaN, 4]`의 평균이 `NumPy`는 `nan`, `Pandas`는 `2.33`이다. 에러 없이 빈 값이 빠진 채 계산되므로 계산 전에 `isna().sum()`으로 개수부터 확인한다.
+
+### 6.3 `isna()`, `isnull()`, `np.isnan()`의 차이
+
+세 함수를 비교한 표:
+
+| 함수 | 찾는 대상 | 입력 | 한 줄 정리 |
+|---|---|---|---|
+| `np.isnan()` | `NaN`만 | 숫자 배열 (`None`, 문자열이 섞이면 에러) | 숫자 배열 전용 |
+| `pd.isna()`, `df.isna()` | `NaN`, `None`, `NaT`, `pd.NA` | 값 하나, `Series`, `DataFrame` | `Pandas`에서는 이것을 쓴다 |
+| `pd.isnull()`, `df.isnull()` | `isna()`와 같다 | 같다 | `isna()`의 다른 이름이다. 기능 차이는 없다 |
+
+- 반대는 `notna()`이다. 이 과제는 `isna()`로 통일했다.
+
+`Pandas`로 빈 값을 세는 코드와, 막히기 쉬운 `==` 실수:
+
+```python
+# 열마다 빈 칸 개수를 센다 (True를 1로 계산해서 더한다)
+column_missing_counts = df.isna().sum()
+
+# 잘못된 방법: NaN은 자기 자신과도 같지 않아서 항상 0개가 나온다
+wrong_count = (df["price"] == np.nan).sum()
+
+# 올바른 방법: isna()로 찾는다
+right_count = df["price"].isna().sum()
+```
+
+- 이 과제에서는 `missing_report()`가 `df.isna().sum()`으로 빈 값을 세고, `handle_missing_values()`가 `isna().any()`로 대상 열을 고른 뒤 `fillna()`로 채운다. 상품 200개 중 `price` 15개, `rating` 22개가 비어 있었고 주문에 합치면 369건(7.2%), 566건(11.0%)이 된다.
+
+--
 
 ## 왜 이 과제에 나오나
 - 과제가 "그룹별 결측치 대치"를 명시했다. 단순히 전체 평균으로 채우는 것보다 한 단계 나아간 방법을 해 보라는 뜻이다.
@@ -500,7 +560,8 @@ plt.show()
 - 기준이 되는 값(예: IQR 범위, RFM 점수 방향)을 작은 데이터로 손으로 계산해 두면 구현 실수를 잡을 수 있다.
 
 ## 이 과제에서는
-- `tests/test_pipeline.py`에 31개, `tests/test_constants.py`에 4개가 있고 전부 통과한다.
+- `tests/test_pipeline.py`에 31개, `tests/test_generate_data.py`에 8개, `tests/test_constants.py`에 4개로 모두 43개이고 전부 통과한다.
+- `test_registered_before_orders`는 모든 주문이 그 상품의 등록일 이후인지 확인한다.
 - 결측치 대치 전략별 결과와 잘못된 전략 입력 시 에러, IQR 경계와 `threshold` 변화, `clip`과 `remove` 결과, 이미지 배열 모양과 다운샘플링, 평평한 이미지의 엣지가 0인지, RFM 값과 점수 방향, 세그먼트 규칙, 코호트 재구매율을 작은 데이터로 손계산한 값과 비교한다.
 - `demo.sh` 2단계에서 자동 실행된다.
 
@@ -518,6 +579,7 @@ plt.show()
 | F | Frequency | 빈도 | 구매(주문) 횟수 | 클수록 |
 | M | Monetary | 금액 | 총 구매 금액 | 클수록 |
 
+- `F`(주문 횟수)는 행 수가 아니라 `order_id`의 고유 개수(`nunique`)로 센다. 한 주문에 상품이 여러 개인 데이터에서도 맞게 세기 위해서다. 이 과제는 한 주문에 상품이 하나라 두 방식의 결과가 같다. (`calculate_rfm()`)
 - 세그먼트(Segment): 비슷한 특성의 고객을 묶은 그룹이다. 이 과제는 VIP, Loyal, New, Regular, At Risk, Churned 6개다.
 
 ### 점수 매기기
