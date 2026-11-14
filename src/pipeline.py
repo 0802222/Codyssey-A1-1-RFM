@@ -53,9 +53,9 @@ class DataAnalyzer:
         self.rfm: pd.DataFrame | None = None
 
     # 1. 데이터 로드
-
-    # CSV를 읽어 self.df에 담는다
-    # CSV를 읽는다. 상품 데이터가 있으면 merge_key로 합친다.
+    #
+    # - CSV를 읽어 주문 데이터를 self.df에 담는다.
+    # - 만약, 상품 데이터가 있으면 merge_key로 합친다.
     def load_data(
         self, date_cols: list[str] | None = None, merge_key: str = "product_id"
     ) -> pd.DataFrame:
@@ -70,7 +70,7 @@ class DataAnalyzer:
             # 상품 번호가 같은 행끼리 옆으로 붙인다
             df = df.merge(products, on=merge_key, how="left")
 
-        # 날짜로 바꿀 컬럼을 하나씩 꺼낸다
+        # 데이터 전처리 (데이터 타입 변환 : 문자열 -> 날짜형)
         for col in date_cols or []:
             # 문자열을 날짜형으로 바꾼다
             df[col] = pd.to_datetime(df[col])
@@ -82,9 +82,9 @@ class DataAnalyzer:
         return self.df
 
     # 2. 결측치 처리
-
-    # 컬럼마다 빈 값이 얼마나 되는지 보여준다
-    # 컬럼별 결측치 개수와 비율(%)을 돌려준다.
+    #
+    # - 컬럼마다 빈 값이 얼마나 되는지 보여준다.
+    # - 컬럼별 결측치 개수와 비율(%)을 돌려준다.
     def missing_report(self) -> pd.DataFrame:
         # 컬럼별 빈 값 개수를 센다
         missing_counts = self.df.isna().sum()
@@ -455,10 +455,10 @@ class DataAnalyzer:
         # 기준일을 안 정했으면
         if reference_date is None:
             # 데이터의 마지막 거래일을 기준일로 쓴다
-            reference_date = self.df[date_col].max()
-
-        # 날짜형으로 맞춘다
-        reference_date = pd.Timestamp(reference_date)
+            reference_date = pd.Timestamp(self.df[date_col].max())
+        else:
+            # 정해 준 기준일을 날짜형으로 맞춘다
+            reference_date = pd.Timestamp(reference_date)
 
         # 고객별로 묶는다
         grouped = self.df.groupby(customer_col)
