@@ -15,7 +15,9 @@ target-version = "py311"
 [tool.ruff.lint]
 # E/W: pycodestyle(PEP8), F: pyflakes, I: import 순서, N: 이름 규칙, D: docstring(PEP257), UP: 최신 문법
 select = ["E", "W", "F", "I", "N", "D", "UP"]
-ignore = ["D203", "D213"]  # D211, D212와 충돌하는 규칙 제외
+# D203, D213: D211, D212와 충돌하는 규칙 제외
+# D102, D103, D107: 함수 설명을 독스트링 대신 함수 위 주석으로 쓰므로 함수 독스트링 필수 검사 제외
+ignore = ["D203", "D213", "D102", "D103", "D107"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"

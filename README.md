@@ -1,33 +1,33 @@
 # Codyssey-A1-1-RFM
 
-- 쇼핑몰에서 누가 자주 오고 많이 사는 단골인지 찾아내고, 고객 유형별로 다른 마케팅 전략을 제안하는 프로젝트이다.
-- `Python`으로 하는 데이터 분석 과제이다. 배열 계산은 `NumPy`, 표 처리는 `Pandas`, 시각화는 `Matplotlib`과 `Seaborn`(보너스 차트는 `Plotly`)만 사용한다.
-- 빈 값과 튀는 값을 `결측치 대치`, `IQR 이상치 처리`로 정리하고, 이미지와 텍스트를 반복문 없는 `벡터 연산`으로 숫자 피처로 바꾼다.
-- 고객을 `RFM` 점수로 6개 그룹으로 나누고, 시각화 6종(`Plotly` 인터랙티브 2종 추가)과 인사이트 4개로 그룹별 전략을 제안한다.
-- 이 모든 과정을 `DataAnalyzer` 클래스 하나로 구현했다.
-
+### 이 과제는 쇼핑몰에 누가 자주 오고, 많이 사는 **단골**인지 찾아내고, 그 고객 유형별로 다른 **마케팅 전략**을 제안한다.
+- `Python`으로 하는 데이터 분석 과제이다.
+    - 배열 계산은 `NumPy`, 표 처리는 `Pandas`, 시각화는 `Matplotlib`과 `Seaborn`(보너스 차트는 `Plotly`)만 사용한다.
+- 데이터 분석의 모든 과정을 `DataAnalyzer` 클래스 하나로 구현했다.
+    - 빈 값과 튀는 값을 `결측치 대치`, `IQR 이상치 처리`로 정리하고, 이미지와 텍스트를 반복문 없는 `벡터 연산`으로 숫자 피처로 바꾼다.
+    - 고객을 `RFM` 점수로 6개 그룹으로 나누고, 시각화 6종(`Plotly` 인터랙티브 2종 추가)과 인사이트 4개로 그룹별 전략을 제안한다.
 
 # 목차
 
 - [1. 과제 설명](#1-과제-설명)
     - [1.1 어떤 과제인가](#11-어떤-과제인가)
-    - [1.2 해야 할 일과 구현 방법](#12-해야-할-일과-구현-방법)
-    - [1.3 사용 기술 스택](#13-사용-기술-스택)
-    - [1.4 프로젝트 구조](#14-프로젝트-구조)
-    - [1.5 실행 방법](#15-실행-방법)
-- [2. 등장하는 개념](#2-등장하는-개념)
+    - [1.2 사용 기술 스택](#12-사용-기술-스택)
+    - [1.3 프로젝트 구조](#13-프로젝트-구조)
+    - [1.4 실행 방법](#14-실행-방법)
+- [2. 등장 개념](#2-등장-개념)
     - [2.1 데이터 분석이란](#21-데이터-분석이란)
-    - [2.2 개념 분류표](#22-개념-분류표)
-- [3. 구현한 내용](#3-구현한-내용)
-    - [3.1 세부 구현 단계](#31-세부-구현-단계)
-    - [3.2 분석에 사용한 데이터](#32-분석에-사용한-데이터)
-    - [3.3 분석 클래스 `DataAnalyzer` 구성](#33-분석-클래스-dataanalyzer-구성)
-    - [3.4 분석 과정과 결과](#34-분석-과정과-결과)
-    - [3.5 RFM 고객 세분화](#35-rfm-고객-세분화)
-    - [3.6 비즈니스 인사이트](#36-비즈니스-인사이트)
+    - [2.2 RFM 분석](#22-rfm-분석)
+- [3. 구현](#3-구현)
+    - [3.1 Data](#31-data)
+    - [3.2 분석 클래스 `DataAnalyzer` 구성](#32-분석-클래스-dataanalyzer-구성)
+    - [3.3 분석 과정과 결과](#33-분석-과정과-결과)
+    - [3.4 RFM 고객 세분화](#34-rfm-고객-세분화)
+    - [3.5 비즈니스 인사이트](#35-비즈니스-인사이트)
+    - [3.6 노트북 리포트와 제안 전략](#36-노트북-리포트와-제안-전략)
+    - [3.7 데이터가 커질 때의 한계와 확장 방향](#37-데이터가-커질-때의-한계와-확장-방향)
 - [4. 최종 결과물](#4-최종-결과물)
     - [4.1 데이터 요구사항 결과](#41-데이터-요구사항-결과)
-    - [4.2 사용 제한 라이브러리 준수 결과](#42-사용-제한-라이브러리-준수-결과)
+    - [4.2 기능 요구사항 결과](#42-기능-요구사항-결과)
     - [4.3 보너스 과제 수행 결과](#43-보너스-과제-수행-결과)
 
 <br>
@@ -37,87 +37,47 @@
 
 ## 1.1 어떤 과제인가
 
-### 1.1.1 해결하려는 문제
-- 쇼핑몰은 고객 1,000명에게 같은 쿠폰을 보낼 수 없다. 자주 오고 많이 사는 단골(`VIP`)과 오래 안 온 이탈 고객(`Churned`)은 다르게 대해야 하는데, 그러려면 먼저 누가 단골인지 알아야 한다.
-- 그런데 주문 데이터는 그대로 쓸 수 없다. 값이 비어 있고(`결측치`), 비정상적으로 큰 값이 섞여 있고(`이상치`), 숫자 외에 상품명(텍스트)과 상품 이미지(픽셀 배열)까지 들어 있다.
-- 그래서 이 과제는 데이터를 전처리하고, 텍스트와 이미지를 숫자로 바꾼 뒤, `RFM`으로 고객을 그룹으로 나누고, 그룹별 전략을 제안한다.
-- 한 줄로 말하면 "쇼핑몰 주문 데이터의 전처리와 분석, 그리고 `RFM` 고객 세분화"이다.
+쇼핑몰 고객마다 구매 가치는 다르다. 자주 사고 많이 쓰는 `VIP`와 오래 방문하지 않은 `Churned`에게 같은 쿠폰을 보내면 비용만 낭비된다. 
+- `RFM`은 최근성(`Recency`), 빈도(`Frequency`), 금액(`Monetary`) 세 숫자로 고객 가치를 매기는 분석 기법이다. 계산 방법은 [2.2 RFM 분석](#22-rfm-분석)에 있다.
 
-### 1.1.2 고객을 나누는 방법: RFM 분석
-- `RFM`은 고객의 구매 기록 세 가지로 고객 가치를 점수로 매기는 마케팅 분석 기법이다. 이름은 아래 세 지표의 앞글자에서 왔다.
-
-`RFM` 세 지표의 뜻과 이 과제에서의 계산 기준표:
-
-| 지표 | 이름 | 뜻 | 이 과제에서의 계산 | 좋은 쪽 |
-|---|---|---|---|---|
-| `R` | `Recency` (최근성) | 마지막 구매가 얼마나 최근인가 | 기준일(2025-12-31) - 마지막 구매일 | 작을수록 |
-| `F` | `Frequency` (빈도) | 얼마나 자주 샀는가 | 주문 횟수 | 클수록 |
-| `M` | `Monetary` (금액) | 얼마나 많이 썼는가 | 총 구매 금액 | 클수록 |
-
-- 고객 1,000명을 지표별로 줄 세워 5등분하고 `R`, `F`, `M` 각각 1\~5점(5점이 좋은 쪽)을 준다. 세 점수의 조합으로 고객을 6개 그룹(세그먼트)으로 나눈다. 점수 계산과 그룹 규칙은 [3.5 RFM 고객 세분화](#35-rfm-고객-세분화)에서 자세히 다룬다.
-- 예: 가장 좋은 그룹 `VIP`의 평균은 마지막 구매 32일 전, 12.5회 주문, 약 175만 원 구매다. 반대로 `Churned`는 마지막 구매 493일 전, 1.5회 주문, 약 8.8만 원이다.
-
-### 1.1.3 분석 전체 흐름
-
-주문, 상품 데이터가 `DataAnalyzer`의 네 단계로 처리되고, 그 결과를 노트북에 정리해 전략을 제안하는 흐름도:
+전체 흐름도
 
 ```mermaid
 flowchart LR
-    A["원본 CSV 2개<br>주문, 상품"] --> B
-    subgraph B["DataAnalyzer 클래스"]
-        direction LR
-        B1["전처리<br>결측치, 이상치"] --> B2["피처 엔지니어링<br>이미지, 텍스트, 금액"] --> B3["통계<br>요약, 상관"] --> B4["RFM<br>점수, 세그먼트"]
-    end
-    B --> C["분석 노트북에 정리<br>차트 6종, 고객 6그룹"]
+    A["원본 CSV 2개<br>주문, 상품"] --> B["DataAnalyzer 클래스<br>전처리, 피처, 통계, RFM"]
+    B --> C["분석 노트북<br>차트 6종, 고객 6그룹"]
     C --> D["전략 제안<br>인사이트 4개"]
 ```
 
-## 1.2 해야 할 일과 구현 방법
+<br>
 
-위 문제를 풀기 위해 해야 할 일과, 이를 구현한 기술과 메서드를 짝지은 표:
+## 1.2 사용 기술 스택
 
-| 해야 할 일 | 왜 필요한가 | 구현한 기술과 메서드 |
-|---|---|---|
-| 고객별 구매 기록 준비 | `RFM`은 고객, 날짜, 금액이 있어야 계산된다 | `data/generate_data.py`에서 `np.random.default_rng(42)`로 시드를 고정해 합성 데이터 생성 (주문 5,160건, 고객 1,000명) |
-| 숫자, 이미지, 텍스트를 한 표에서 분석 | 이미지와 텍스트는 숫자로 바꿔야 같은 표에서 통계를 낼 수 있다 | `Pandas`의 `read_csv`, `merge`로 두 파일을 한 표(`DataFrame`)로 합치고(`load_data()`), 이미지는 `NumPy`의 `np.fromstring`, `reshape`, `mean(axis=...)`로(`add_image_features()`), 텍스트는 `str.split`으로(`add_text_features()`) 숫자 컬럼 `image_brightness_mean`, `name_word_count`를 만든다 |
-| 데이터 전처리 | 빈 값과 튀는 값을 처리하지 않으면 분석이 틀어진다 | 결측치는 `groupby().transform`으로 카테고리별 중앙값 대치(`handle_missing_values()`), 이상치는 `quantile`로 `IQR` 범위를 구해 `clip`(`detect_outliers()`, `handle_outliers()`) |
-| 고객을 그룹으로 나누기 | 그룹을 나눠야 전략이 달라진다 | `pd.qcut`, `rank`로 `R`, `F`, `M` 1\~5점 계산(`calculate_rfm()`), `np.select`로 6개 세그먼트 분류(`segment_customers()`) |
-| 전략의 근거 만들기 | 전략은 수치와 차트로 뒷받침돼야 한다 | `summary_statistics()`, `correlation()`, `Matplotlib`과 `Seaborn` 차트 6종, 인사이트 4개 |
-
-## 1.3 사용 기술 스택
-
-기술을 분류별로 정리하고, 함수마다 쓰인 파일과 역할을 병기한 기술 스택표:
+`데이터 준비 → 분석 → 시각화` 순서로 각 기술을 어디에 썼는지 정리했다.
 
 <table>
 <thead>
-<tr><th>분류</th><th>기술</th><th>사용처 (함수 : 파일 / 역할)</th></tr>
+<tr><th>단계</th><th>기술</th><th>무엇을 했나?</th></tr>
 </thead>
 <tbody>
-<tr><td>언어</td><td><code>Python 3.11</code></td><td>전체 / 구현 언어</td></tr>
-<tr><td rowspan="3">데이터 처리</td><td><code>NumPy</code></td><td><code>np.fromstring</code> : <a href="src/pipeline.py">pipeline.py</a> <code>parse_images()</code> / 픽셀 문자열을 숫자 배열로 읽기<br><code>reshape</code> : <a href="src/pipeline.py">pipeline.py</a> <code>parse_images()</code> / 1차원 숫자를 이미지 모양 (N, 16, 16, 3)으로 바꾸기<br><code>mean(axis=...)</code> : <a href="src/pipeline.py">pipeline.py</a> <code>add_image_features()</code> / 이미지마다 평균 밝기 계산<br><code>np.diff</code> : <a href="src/pipeline.py">pipeline.py</a> <code>add_image_advanced_features()</code> / 이웃 픽셀 밝기 차이로 엣지 강도 계산<br><code>np.select</code> : <a href="src/pipeline.py">pipeline.py</a> <code>segment_customers()</code> / 조건에 맞는 세그먼트 이름 고르기<br><code>default_rng</code> : <a href="data/generate_data.py">generate_data.py</a> / 시드를 고정한 난수로 합성 데이터 생성</td></tr>
-<tr><td><code>Pandas</code></td><td><code>read_csv</code>, <code>merge</code> : <a href="src/pipeline.py">pipeline.py</a> <code>load_data()</code> / CSV를 읽고 두 표를 <code>product_id</code>로 합치기<br><code>groupby().transform</code> : <a href="src/pipeline.py">pipeline.py</a> <code>handle_missing_values()</code> / 그룹별 중앙값으로 빈 값 채우기<br><code>quantile</code>, <code>clip</code> : <a href="src/pipeline.py">pipeline.py</a> <code>get_iqr_bounds()</code>, <code>handle_outliers()</code> / IQR 정상 범위 계산, 범위 밖 값 자르기<br><code>qcut</code>, <code>rank</code> : <a href="src/pipeline.py">pipeline.py</a> <code>calculate_rfm()</code> / 고객을 5등분해 1~5점 매기기</td></tr>
-<tr><td><code>str.split</code>, <code>str.len</code></td><td><code>str.split</code>, <code>str.len</code> : <a href="src/pipeline.py">pipeline.py</a> <code>add_text_features()</code> / 상품명 단어 수와 글자 수 계산</td></tr>
-<tr><td rowspan="2">시각화</td><td><code>Matplotlib</code>, <code>Seaborn</code></td><td><code>histplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 4, 5장 / 값의 분포 보기<br><code>boxplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 4장 / 이상치 처리 전후 비교<br><code>barplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 6, 7장 / 카테고리별, 세그먼트별 비교<br><code>heatmap</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 5, 7, 8장 / 상관행렬, R x F 분포, 코호트 재구매율<br><code>scatterplot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 5장 / 가격과 이미지 밝기의 관계<br><code>ax.plot</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 6장 / 월별 매출 추이 선 그래프</td></tr>
-<tr><td><code>Plotly</code> (보너스)</td><td><code>px.scatter</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 9장 / 마우스를 올리면 값이 보이는 세그먼트 산점도 (고객 한 명 = 점 하나)<br><code>px.line</code> : <a href="notebooks/analysis_report.ipynb">노트북</a> 9장 / 카테고리별 월별 매출 선 그래프</td></tr>
-<tr><td>분석 환경</td><td><code>Jupyter Notebook</code></td><td><a href="notebooks/analysis_report.ipynb">analysis_report.ipynb</a> : 분석 과정과 차트, 해석 정리</td></tr>
-<tr><td rowspan="2">검증과 자동화</td><td><code>unittest</code></td><td><a href="tests/test_pipeline.py">test_pipeline.py</a> : 메서드 동작 테스트 31개, <a href="tests/test_constants.py">test_constants.py</a> : 공통 상수 테스트 4개, <a href="tests/test_generate_data.py">test_generate_data.py</a> : 데이터 생성 함수 테스트 7개</td></tr>
-<tr><td><code>Shell</code> 스크립트</td><td><a href="demo.sh">demo.sh</a> : 금지 라이브러리 검사부터 노트북 실행까지</td></tr>
-<tr><td>코딩 컨벤션 (<code>PEP8</code>)</td><td><code>black</code>, <code>isort</code>, <code>ruff</code>, <code>mypy</code></td><td><code>black</code> : <a href="pyproject.toml">pyproject.toml</a> / 코드 모양을 88자 기준으로 자동 정리<br><code>isort</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>import</code> 순서를 <code>black</code>과 같은 규칙으로 정리<br><code>ruff</code> : <a href="pyproject.toml">pyproject.toml</a> / <code>PEP8</code>(<code>E</code>, <code>W</code>), 안 쓰는 코드(<code>F</code>), 이름 규칙(<code>N</code>), <code>docstring</code>(<code>D</code>) 위반 검사<br><code>mypy</code> : <a href="pyproject.toml">pyproject.toml</a> / 함수 인자와 반환값의 타입 힌트 검사</td></tr>
+<tr><td>데이터 생성</td><td><code>Python 3.11</code>, NumPy</td><td><a href="data/generate_data.py"><code>data/generate_data.py</code></a><br>실행할 때마다 같은 결과가 나오도록 시드를 고정하고, 주문·상품 합성 데이터를 만든다.</td></tr>
+<tr><td rowspan="2">데이터 준비</td><td rowspan="2">Pandas, NumPy</td><td><a href="src/pipeline.py"><code>src/pipeline.py</code></a>의 <code>load_data()</code>에서 CSV 두 개를 상품 ID로 합친다.</td></tr>
+<tr><td>결측치와 이상치를 처리하고, 이미지 픽셀을 평균 밝기·엣지 강도 같은 숫자 피처로 바꾼다.</td></tr>
+<tr><td>고객 분류</td><td>Pandas, NumPy</td><td><code>calculate_rfm()</code>에서 최근성(R), 구매 빈도(F), 구매 금액(M)을 1~5점으로 환산한 뒤, <code>segment_customers()</code>에서 고객 그룹을 정한다.</td></tr>
+<tr><td>결과 확인</td><td>Matplotlib, Seaborn</td><td><a href="notebooks/analysis_report.ipynb"><code>notebooks/analysis_report.ipynb</code></a>에서 분포, 상관관계, 월별 매출, 세그먼트 차이를 차트로 확인한다.</td></tr>
+<tr><td>인터랙티브 차트</td><td>Plotly (보너스)</td><td>마우스를 올려 고객별 값과 카테고리별 매출을 확인할 수 있는 산점도·선 그래프를 만든다.</td></tr>
+<tr><td>분석 환경</td><td>Jupyter Notebook</td><td>분석 과정과 차트를 한 파일에서 재현하고, 마지막에 인사이트와 전략을 정리한다.</td></tr>
 </tbody>
 </table>
 
-- 과제 규칙상 `OpenCV`, `Pillow`(이미지), `Scikit-learn`, `NLTK`(ML, NLP), 자동 `EDA` 라이브러리는 쓰지 않았다. 이미지와 텍스트 처리를 `NumPy`와 `Pandas` 기본 기능으로 직접 구현하는 것이 학습 목표이기 때문이다.
+- 과제 규칙상 `OpenCV`, `Scikit-learn`, `NLTK` 같은 전문 라이브러리는 쓰지 않았다.
 
-## 1.4 프로젝트 구조
+<br>
+
+## 1.3 프로젝트 구조
 
 ```
 Codyssey-A1-1-RFM/
-├── README.md
-├── study.md                     # 과제 개념 정리
-├── requirements.txt             # 설치할 패키지 목록
-├── requirements-dev.txt         # 코드 검사 도구 목록 (black, isort, ruff, mypy)
-├── pyproject.toml               # 코딩 컨벤션 도구 설정
-├── demo.sh                      # 시연 스크립트
 ├── data/
 │   ├── __init__.py              # data를 패키지로 만들어 -m으로 실행하게 한다
 │   ├── generate_data.py         # 합성 데이터 생성 (seed=42)
@@ -130,34 +90,38 @@ Codyssey-A1-1-RFM/
 │   └── analysis_report.ipynb    # 분석 리포트
 ├── docs/
 │   ├── figures/                 # 노트북이 저장한 차트 이미지
-│   └── interactive/             # Plotly 인터랙티브 차트 (HTML)
-└── tests/
-    ├── test_constants.py        # 공통 상수 테스트 4개
-    ├── test_generate_data.py    # 데이터 생성 함수 테스트 7개
-    └── test_pipeline.py         # 단위 테스트 31개
+│   ├── interactive/             # Plotly 인터랙티브 차트 (HTML)
+│   └── *.md                     # 데이터 설명, 분석 결과, 메서드 API, 실행 가이드, 확장 설계
+├── tests/
+│   ├── test_constants.py        # 공통 상수 테스트 4개
+│   ├── test_generate_data.py    # 데이터 생성 함수 테스트 8개
+│   └── test_pipeline.py         # 단위 테스트 31개
+├── README.md
+├── study.md                     # 과제 개념 정리
+├── requirements.txt             # 설치할 패키지 목록
+├── requirements-dev.txt         # 코드 검사 도구 목록 (black, isort, ruff, mypy)
+├── pyproject.toml               # 코딩 컨벤션 도구 설정
+└── demo.sh                      # 시연 스크립트
 ```
 
-파일 사이의 의존 흐름도:
+<br>
+
+### 1.3.1 파일 사이의 의존 관계
+
+: 각 파일은 바로 다음 파일에만 의존한다. (공통 상수 파일 `src/constants.py`는 제외)
 
 ```
-data/generate_data.py -> data/*.csv -> src/pipeline.py -> notebooks/analysis_report.ipynb
+data/generate_data.py (합성 데이터 생성/저장) -> data/*.csv (데이터 파일) -> src/pipeline.py (데이터 분석)-> notebooks/analysis_report.ipynb (차트/해석/결과)
 ```
 
-- `data/generate_data.py`와 `src/pipeline.py`는 서로를 모른다. 둘은 CSV 파일(`data/*.csv`)로만 이어진다. 생성 스크립트가 쓰고 파이프라인이 읽는다.
-- 노트북은 `src/pipeline.py`의 `DataAnalyzer`를 가져다 쓴다. 생성 스크립트는 직접 부르지 않는다.
-- 각 파일은 바로 다음 파일에만 의존한다.
+- `data/generate_data.py`와 `src/pipeline.py`는 서로를 모른다. 
+    - 둘은 CSV 파일(`data/*.csv`)로만 이어진다. 
+- 노트북은 `src/pipeline.py`의 `DataAnalyzer`를 가져다 쓴다.
+- `src/constants.py`(저장 경로, 이미지 모양 등 공통 상수)는 `data/generate_data.py`, `src/pipeline.py`, 노트북이 함께 가져다 쓴다.
 
-| 파일 | 하는 일 | 충족하는 요구사항 |
-|---|---|---|
-| [data/generate_data.py](data/generate_data.py), `data/*.csv` | 합성 데이터를 만들고 저장한다 | 1,000건 이상(5,160건), 8개 컬럼 이상(13개), 데이터 유형 3가지 이상(5가지), 출처 공개 |
-| [src/pipeline.py](src/pipeline.py) | `DataAnalyzer` 클래스 (메서드 18개) | 필수 메서드 4개(`load_data`, `handle_missing_values`, `detect_outliers`, `calculate_rfm`), 임계값과 대치 전략을 인자로 받기, 이미지 평균과 표준편차(반복문 없이), 상품명 단어 수와 길이, 그룹별 결측치 대치, `IQR` 이상치, 요약 통계와 상관계수, `RFM` 점수와 6개 세그먼트 |
-| [notebooks/analysis_report.ipynb](notebooks/analysis_report.ipynb) | 분석 과정, 차트, 해석을 한 문서로 | `info()`, `describe()`, `head()` 해석(1장), 이상치 처리 전후 시각화(4장), 차트 6종과 제목, 축 레이블(4\~8장), 상관계수 5쌍(5장), 세그먼트 결과(7장) |
+<br>
 
-- 핵심 코드는 `src/pipeline.py`, 결과는 노트북, 한 번에 보려면 `./demo.sh`다.
-
-## 1.5 실행 방법
-
-가상환경을 만들고 시연 스크립트를 실행하는 명령어:
+## 1.4 실행 방법
 
 ```bash
 # 1. 가상환경 생성과 패키지 설치 (처음 한 번. Python 3.10 이상 필요)
@@ -169,157 +133,157 @@ python3.11 -m venv .venv
 ./demo.sh --no-nb    # 노트북 재실행만 생략
 ```
 
-코딩 컨벤션(`PEP8`)을 검사하는 명령어. 4개 모두 통과한 상태이며, 코드를 고치면 같은 순서로 다시 돌린다:
-
-```bash
-.venv/bin/pip install -r requirements-dev.txt                        # 검사 도구 설치 (처음 한 번)
-.venv/bin/black --check src tests data/generate_data.py              # 코드 모양이 규칙에 맞는지 검사 (--check를 빼면 자동 수정)
-.venv/bin/isort --check src tests data/generate_data.py              # import 순서 검사
-.venv/bin/ruff check src tests data/generate_data.py                 # PEP8, 미사용 코드, docstring 검사
-.venv/bin/mypy src tests data/generate_data.py                       # 타입 힌트 검사
-```
-
-- 줄 길이는 88자다. 한 줄마다 단 설명 주석이 길어지면 코드 윗줄로 옮겨 적는다.
-- `demo.sh`의 단계별 동작과 한 단계씩 직접 실행하는 명령어는 [docs/run_guide.md](docs/run_guide.md)에 있다.
-- `Python 3.10` 이상에서 동작한다. (개발 환경: `Python 3.11.4`, macOS)
-
 <br>
 <br>
 
-# 2. 등장하는 개념
+# 2. 등장 개념
 
 ## 2.1 데이터 분석이란
 
-- 데이터 분석(Data Analysis)은 쌓여 있는 데이터에서 숫자와 패턴을 찾아내, "그래서 무엇을 할까"를 결정하는 일이다.
+- **데이터 분석(Data Analysis)** 은 쌓여 있는 데이터에서 숫자와 패턴을 찾아내, "그래서 무엇을 할까"를 결정하는 일이다.
 - 이 과제의 질문은 "우리 쇼핑몰의 단골은 누구이고, 그들에게 무엇을 해야 하나"이다.
-- 분석은 보통 아래 다섯 단계로 진행한다. 단계 이름은 현업에서 쓰는 용어로 적었고, 앞 단계의 결과가 뒤 단계의 재료가 된다.
 
-데이터 분석의 일반적인 진행 단계도:
+분석은 아래 다섯 단계로 진행하고, 이 과제도 같은 순서로 구현했다.
 
-```mermaid
-flowchart LR
-    A["데이터 이해<br>Data Understanding"] --> B["데이터 전처리<br>Preprocessing"]
-    B --> C["피처 엔지니어링<br>Feature Engineering"]
-    C --> D["탐색적 데이터 분석<br>EDA, Exploratory Data Analysis"]
-    D --> E["고객 세분화와 인사이트<br>Segmentation"]
-```
-
-- `전처리`(Preprocessing): 결측치, 이상치처럼 분석을 방해하는 값을 정리하는 단계다.
-- `피처 엔지니어링`(Feature Engineering): 원본 데이터에서 분석에 쓸 새 숫자 열(피처)을 만드는 단계다.
-- `EDA`(Exploratory Data Analysis, 탐색적 데이터 분석): 통계와 차트로 데이터의 특징과 관계를 살펴보는 단계다.
-- `세분화`(Segmentation): 고객을 비슷한 그룹으로 나누는 단계다.
-
-이 과제는 다섯 단계를 모두 거친다. 그중 고객을 점수로 나누는 `RFM`이 핵심이고, 나머지 단계는 `RFM`을 믿을 수 있게 만드는 준비 과정이다.
-
-
-## 2.2 개념 분류표
-
-이 과제에 나오는 개념을 대분류, 중분류로 묶은 표:
+단계별 개념과 이 과제에서 한 일
 
 <table>
 <thead>
-<tr><th>대분류</th><th>중분류</th><th>개념</th><th>한 줄 설명</th><th>이 과제에서 쓰인 곳</th></tr>
+<tr><th>단계</th><th>하는 일</th><th>등장 개념</th><th>이 과제에서 한 일</th></tr>
 </thead>
 <tbody>
-<tr><td rowspan="10">데이터 분석</td><td>데이터 이해</td><td>데이터 유형</td><td>수치형, 범주형, 날짜형, 텍스트, 이미지로 나눠서 각각 맞는 방법으로 분석한다</td><td>컬럼 13개, 유형 5가지</td></tr>
-<tr><td rowspan="2">데이터 전처리</td><td><code>결측치</code> 대치</td><td>빈 값을 합리적인 값으로 채우기</td><td>카테고리별 중앙값으로 <code>price</code>, <code>rating</code>을 채운다</td></tr>
-<tr><td><code>IQR</code> 이상치 탐지</td><td>사분위수로 "정상 범위"를 정하고 벗어난 값을 찾기</td><td>주문 금액 이상치 550건을 찾고, 지우지 않고 <code>clip</code>한다</td></tr>
-<tr><td>피처 엔지니어링</td><td>멀티모달 <code>피처</code></td><td>텍스트와 이미지를 숫자 컬럼으로 바꿔 표 안에서 같이 분석하기</td><td>이미지 평균, 표준편차, 엣지 강도, 상품명 단어 수</td></tr>
-<tr><td rowspan="3">탐색적 데이터 분석(EDA)</td><td>기술 통계</td><td>평균, 중앙값, 표준편차, 사분위수로 데이터를 요약하기</td><td><code>summary_statistics()</code>로 <code>amount</code> 평균 118,254원, 중앙값 48,600원</td></tr>
-<tr><td><code>상관계수</code></td><td>두 변수가 함께 움직이는 정도 (인과는 아님)</td><td>가격과 이미지 밝기 -0.80 등 5쌍을 해석한다</td></tr>
-<tr><td>시각화</td><td>데이터를 질문에 맞는 차트로 그리기</td><td>정적 차트 6종, <code>Plotly</code> 인터랙티브 2종 (보너스)</td></tr>
-<tr><td rowspan="3">고객 세분화와 인사이트</td><td><code>RFM</code> 분석</td><td>최근성(<code>Recency</code>), 빈도(<code>Frequency</code>), 금액(<code>Monetary</code>) 세 숫자로 고객 가치를 매기는 방법</td><td>고객 1,000명을 1~5점으로 채점해 6그룹으로 나눈다</td></tr>
-<tr><td><code>코호트</code> 분석</td><td>같은 시기에 시작한 고객 묶음을 시간 순으로 추적하기</td><td>첫 구매 월별 재구매율 히트맵 (보너스)</td></tr>
-<tr><td>비즈니스 인사이트</td><td>수치 근거 → 실행 방안 → 검증 방법으로 쓰는 해석</td><td>인사이트 4개</td></tr>
-<tr><td rowspan="3">프로그래밍</td><td rowspan="3">구현 기법</td><td><code>벡터 연산</code></td><td>반복문 없이 배열 전체를 한 번에 계산하기</td><td>이미지 5,160장의 평균을 <code>axis</code> 인자 하나로 구한다</td></tr>
-<tr><td>객체 지향 설계</td><td>데이터와 처리 기능을 클래스 하나로 묶어 재사용하기</td><td><code>DataAnalyzer</code>가 설정값을 인자로 받는다</td></tr>
-<tr><td>단위 테스트</td><td>함수 하나하나가 맞게 동작하는지 자동으로 확인하기</td><td><code>tests/test_pipeline.py</code> 31개</td></tr>
+<tr><td>1. 데이터 이해</td><td>어떤 데이터가 있는지 확인한다</td><td><code>데이터 유형</code>: 수치형, 범주형, 날짜형, 텍스트, 이미지로 나눠 각각 맞는 방법으로 분석한다</td><td>주문·상품 CSV를 합쳐 컬럼 13개, 유형 5가지를 확인한다. (<a href="#31-data">3.1</a>)</td></tr>
+<tr><td rowspan="2">2. 데이터 전처리<br>(Preprocessing)</td><td rowspan="2">결측치, 이상치처럼 분석을 방해하는 값을 정리한다</td><td><code>결측치</code> 대치: 빈 값을 합리적인 값으로 채운다</td><td><code>price</code> 369개, <code>rating</code> 566개의 빈 값을 카테고리별 중앙값으로 채운다. (<a href="#331-결측치-카테고리별-중앙값으로-대치">3.3.1</a>)</td></tr>
+<tr><td><code>IQR</code> 이상치 탐지: 사분위수로 "정상 범위"를 정하고 벗어난 값을 찾는다</td><td>주문 금액 이상치 550건을 찾고, 지우지 않고 <code>clip</code>한다. (<a href="#333-이상치-iqr로-찾고-지우지-않고-따로-clip">3.3.3</a>)</td></tr>
+<tr><td>3. 피처 엔지니어링<br>(Feature Engineering)</td><td>원본 데이터에서 분석에 쓸 새 숫자 열(피처)을 만든다</td><td><code>멀티모달 피처</code>: 텍스트와 이미지를 숫자 컬럼으로 바꿔 표 안에서 같이 분석한다</td><td>주문 금액 <code>amount</code>(가격 x 수량), 이미지 평균, 표준편차, 엣지 강도, 상품명 단어 수를 만든다. (<a href="#332-멀티모달-피처-반복문-없이-벡터-연산">3.3.2</a>)</td></tr>
+<tr><td rowspan="3">4. 탐색적 데이터 분석<br>(EDA, Exploratory Data Analysis)</td><td rowspan="3">통계와 차트로 데이터의 특징과 관계를 살펴본다</td><td><code>기술 통계</code>: 평균, 중앙값, 표준편차, 사분위수로 데이터를 요약한다</td><td><code>amount</code> 평균 118,254원, 중앙값 48,600원을 구한다. (<a href="#334-통계와-상관관계">3.3.4</a>)</td></tr>
+<tr><td><code>상관계수</code>: 두 변수가 함께 움직이는 정도 (인과는 아님)</td><td>가격과 이미지 밝기 -0.80 등 5쌍을 해석한다. (<a href="#334-통계와-상관관계">3.3.4</a>)</td></tr>
+<tr><td><code>시각화</code>: 데이터를 질문에 맞는 차트로 그린다</td><td>정적 차트 6종과 <code>Plotly</code> 인터랙티브 2종(보너스)을 만든다. (<a href="#335-시각화-6종">3.3.5</a>)</td></tr>
+<tr><td rowspan="3">5. 고객 세분화와 인사이트<br>(Segmentation)</td><td rowspan="3">비슷한 고객을 그룹으로 나누고, 그룹별 전략을 정한다</td><td><code>RFM</code> 분석: 최근성, 빈도, 금액 세 숫자로 고객 가치를 매긴다. (<a href="#22-rfm-분석">2.2</a>)</td><td>고객 1,000명을 1~5점으로 채점해 6그룹으로 나눈다. (<a href="#34-rfm-고객-세분화">3.4</a>)</td></tr>
+<tr><td><code>코호트</code> 분석: 같은 시기에 시작한 고객 묶음을 시간 순으로 추적한다</td><td>첫 구매 월별 재구매율 히트맵을 만든다. (보너스, <a href="#35-비즈니스-인사이트">3.5</a>)</td></tr>
+<tr><td>비즈니스 인사이트: 수치 근거, 실행 방안, 검증 방법 순으로 쓰는 해석</td><td>인사이트 4개를 쓴다. (<a href="#35-비즈니스-인사이트">3.5</a>)</td></tr>
 </tbody>
 </table>
 
+<br>
+
+분석 단계 밖의 구현 기법
+
+- `벡터 연산`: 반복문 없이 배열 전체를 한 번에 계산한다. 이미지 5,160장의 평균을 `axis` 인자 하나로 구한다.
+- `객체 지향 설계`: 데이터와 처리 기능을 클래스 하나로 묶어 재사용한다. `DataAnalyzer`가 설정값을 인자로 받는다. ([3.2](#32-분석-클래스-dataanalyzer-구성))
 - 각 개념의 "무엇이고, 왜 이 과제에 나오고, 어떻게 쓰였는지"는 [study.md](study.md)에 자세히 정리했다.
 
 <br>
+
+## 2.2 RFM 분석
+
+`RFM`은 고객의 최근성·빈도·구매 금액을 점수화해 고객 가치를 한눈에 보여주는 분석 기법이다. 5단계 중 "고객 세분화"에서 쓴다.
+
+| 지표 | 이름 | 뜻 | 이 과제에서의 계산 | 좋은 쪽 |
+|---|---|---|---|---|
+| `R` | `Recency` (최근성) | 마지막 구매가 얼마나 최근인가 | 기준일(2025-12-31) - 마지막 구매일 | 작을수록 |
+| `F` | `Frequency` (빈도) | 얼마나 자주 샀는가 | 주문 횟수 | 클수록 |
+| `M` | `Monetary` (금액) | 얼마나 많이 썼는가 | 총 구매 금액 | 클수록 |
+
+- 점수 계산과 6개 세그먼트 규칙은 [3.4 RFM 고객 세분화](#34-rfm-고객-세분화)에서 다룬다.
+
+<br>
 <br>
 
-# 3. 구현한 내용
+# 3. 구현
 
-## 3.1 세부 구현 단계
+데이터 → 분석 클래스 → 분석 작업 → RFM 세분화 → 인사이트 → 리포트와 제안 전략 순서로 이어진다. 앞 절의 결과가 다음 절의 입력이다.
 
-구현은 앞 단계의 결과가 뒤 단계의 입력이 되므로 순서가 중요하다.
+## 3.1 Data
 
-구현 흐름도
+[data/generate_data.py](data/generate_data.py)로 만든 합성 데이터를 쓴다. 상품 이미지 배열과 고객별 거래 기록을 함께 가진 공개 데이터가 드물고, 결측치, 이상치, 여러 데이터 유형을 한 데이터셋에서 검증하기 위해서다.
 
-```mermaid
-flowchart LR
-    A["1~4 준비<br>환경, 데이터, 탐색"] --> B["5~6 전처리<br>결측치, 금액"]
-    B --> C["7~10 피처 엔지니어링, EDA<br>피처, 이상치, 통계, 차트"]
-    C --> D["11~12 고객 세분화<br>RFM, 코호트"]
-    D --> E["13 인사이트 도출<br>근거, 실행, 검증"]
-```
+- 시드(`seed=42`)를 고정해서 누가 실행해도 같은 데이터가 나온다.
+- 주문 5,160건은 고객 1,000명의 유형별 평균 주문 횟수(VIP 약 19회부터 이탈 약 2회까지)에서 나온 결과로, 고객당 평균 5.16회다.
+    - 이 정도 횟수가 있어야 `Frequency`로 고객이 갈리고, 월별 매출과 코호트 분석에 월 평균 약 215건이 확보된다.
+    - 주문 횟수는 행 수가 아니라 `order_id`의 고유 개수로 센다. 한 주문에 상품이 여러 개인 데이터에서도 맞게 세기 위해서다.
+- 주문 파일(7개 컬럼)과 상품 파일(7개 컬럼)을 `product_id`로 합친 13개 컬럼이고, 5가지 유형이 있다. 생성 규칙 전체는 [docs/data_description.md](docs/data_description.md)에 있다.
 
-단계별로 할 일
+합친 표의 컬럼 13개를 유형별로 정리한 표:
 
-| 단계 | 할 일 | 쓰는 것 | 막히기 쉬운 점 |
-|---|---|---|---|
-| 1 | 가상환경을 만들고 패키지를 설치한다 | `venv`, `requirements.txt` | 터미널, VS Code, 노트북이 서로 다른 `Python`을 쓰면 `No module named ...`이 난다. 하나로 맞춘다 |
-| 2 | 합성 데이터를 만든다 | `generate_data.py`, 시드 42 | 시드를 고정하지 않으면 실행할 때마다 숫자가 달라진다 |
-| 3 | 주문과 상품 파일을 합친다 | `load_data()`, `merge_key="product_id"` | 날짜가 문자열로 읽힌다. `date_cols`로 날짜형 변환을 알려 준다 |
-| 4 | 데이터를 눈으로 확인한다 | `head()`, `info()`, `describe()` | 출력만 붙이지 말고 "빈 값이 있는 컬럼", "평균과 중앙값 차이"를 해석한다 |
-| 5 | 빈 값을 채운다 | `handle_missing_values(strategy="group_median")` | 금액을 계산하기 전에 해야 한다. 가격이 비어 있으면 `amount`도 비어 버린다 |
-| 6 | 주문 금액을 만든다 | `add_amount()` (`price x quantity`) | 5단계보다 먼저 하면 안 된다 |
-| 7 | 이미지와 텍스트를 숫자로 바꾼다 | `add_image_features()`, `add_text_features()` | 반복문 금지. `np.fromstring`으로 한 번에 읽고 `axis`로 평균을 낸다 |
-| 8 | 이상치를 찾고 처리한다 | `detect_outliers()`, `handle_outliers()` | 이상치가 정상 거래일 수 있다. 지우기 전에 어떤 행인지 먼저 본다 |
-| 9 | 통계와 상관을 낸다 | `summary_statistics()`, `correlation()` | 상관이 높아도 인과가 아니다. 교란 변수를 의심한다 |
-| 10 | 차트 6종을 그린다 | `Seaborn`, `Matplotlib` | 모든 차트에 제목과 축 레이블을 넣는다 |
-| 11 | 고객을 점수로 나눈다 | `calculate_rfm()`, `segment_customers()` | `qcut`이 동점 때문에 실패한다. `rank(method="first")`를 먼저 쓴다 |
-| 12 | 월별 매출과 코호트를 본다 | `monthly_sales()`, `cohort_retention()` | 첫 구매 고객이 없는 달은 행이 비어 있다. 에러가 아니라 데이터의 특징이다 |
-| 13 | 인사이트를 쓴다 | 근거, 실행, 검증 | 근거는 수치로, 검증은 "틀릴 수 있는 이유"로 쓴다 |
+<table>
+<thead>
+<tr><th>유형</th><th>컬럼</th><th>설명</th></tr>
+</thead>
+<tbody>
+<tr><td rowspan="3">식별자</td><td><code>order_id</code></td><td>주문 번호</td></tr>
+<tr><td><code>customer_id</code></td><td>고객 번호 (<code>RFM</code> 기준)</td></tr>
+<tr><td><code>product_id</code></td><td>상품 번호 (두 파일을 합치는 키)</td></tr>
+<tr><td rowspan="2">날짜형</td><td><code>order_date</code></td><td>주문일 (<code>Recency</code> 기준)</td></tr>
+<tr><td><code>registered_date</code></td><td>상품 등록일</td></tr>
+<tr><td rowspan="3">수치형</td><td><code>quantity</code></td><td>주문 수량</td></tr>
+<tr><td><code>price</code></td><td>상품 가격(원)</td></tr>
+<tr><td><code>rating</code></td><td>상품 평점 (1~5)</td></tr>
+<tr><td rowspan="3">범주형</td><td><code>region</code></td><td>고객 지역 (7개)</td></tr>
+<tr><td><code>payment_method</code></td><td>결제 수단 (4개)</td></tr>
+<tr><td><code>category</code></td><td>상품 카테고리 (6개)</td></tr>
+<tr><td>텍스트</td><td><code>product_name</code></td><td>상품명</td></tr>
+<tr><td>이미지 배열</td><td><code>image_pixels</code></td><td>16x16x3 = 768개 픽셀 값을 공백으로 이은 문자열</td></tr>
+</tbody>
+</table>
 
+<br>
 
-## 3.2 분석에 사용한 데이터
+## 3.2 분석 클래스 `DataAnalyzer` 구성
 
-### 3.2.1 데이터 출처와 합성 데이터를 쓴 이유
-- [data/generate_data.py](data/generate_data.py)로 직접 만든 합성 데이터다. 외부 데이터를 쓰지 않아 라이선스 제약이 없다.
-- 고정 시드(`seed=42`)를 쓰므로 누가 실행해도 같은 데이터가 나온다.
-- 합성 데이터를 고른 이유: 공개 데이터 중 "상품 이미지 배열 + 고객별 거래 기록"을 함께 가진 데이터가 드물고, 과제 조건(결측치, 이상치, 여러 데이터 유형)을 한 데이터셋에서 모두 검증하기 위해서다.
+3.1의 데이터를 읽어 분석의 전 과정을 수행하는 클래스를 만들었다.
 
-### 3.2.2 데이터 항목(컬럼)과 합성 규칙
-- 주문 파일과 상품 파일을 합친 표는 13개 컬럼이다. 수치형, 범주형, 날짜형, 텍스트, 이미지 배열 5가지 유형이 들어 있다.
-- 주문 금액 `amount`는 파이프라인에서 `price x quantity`로 만든다. `Recency` 기준일은 데이터의 마지막 거래일인 2025-12-31이다.
-- 결측치는 `price` 7.2%, `rating` 11.0%이고, 이상치는 전체 주문의 약 1.5%를 10\~30개 대량 주문으로 넣었다.
-- 분석 결과의 패턴은 생성 규칙에서 나온 것이다. 파이프라인이 숨겨진 패턴을 제대로 찾는지 확인하는 용도이며, 실제 데이터에 적용할 때는 다시 검증해야 한다.
-- 컬럼별 설명표와 생성 규칙 전체는 [docs/data_description.md](docs/data_description.md)에 있다.
+- 단계별로 쓰는 함수와 메서드는 [1.2 사용 기술 스택](#12-사용-기술-스택)에 있다. 메서드 18개의 주요 인자와 호출 예시는 [docs/dataanalyzer_api.md](docs/dataanalyzer_api.md)에 있다.
 
-## 3.3 분석 클래스 `DataAnalyzer` 구성
+메서드를 이렇게 나눈 이유
+- 분석 단계 하나가 메서드 하나다. 한 메서드는 한 가지 일만 한다.
+    - 예: `detect_outliers()`는 찾기만 하고, 처리는 `handle_outliers()`가 맡는다. 찾는 기준만 바꿔 보거나 처리 방식만 바꿀 수 있다.
+- 표(`DataFrame`)를 `DataAnalyzer`가 들고 있어서, 메서드를 순서대로 호출하면 앞 단계의 결과가 다음 단계로 이어진다.
+- 단계별로 나뉘어 있어 메서드마다 단위 테스트를 쓸 수 있다.
 
-절차형 스크립트가 아닌 클래스로 만들었다. 데이터(`self.df`, `self.rfm`)를 객체 안에 두고 메서드를 순서대로 호출한다. 주요 설정값은 모두 인자로 받는다. 메서드별 주요 인자와 호출 예시는 [docs/dataanalyzer_api.md](docs/dataanalyzer_api.md)에 있다.
+<br>
 
-`DataAnalyzer`의 메서드 18개를 처리 단계별로 묶은 목록표:
+### 3.2.1 설정값을 인자로 받는 이유
 
-| 단계 | 메서드 |
-|---|---|
-| 로드 | `load_data()` |
-| 결측치 | `missing_report()`, `handle_missing_values()` |
-| 이상치 | `get_iqr_bounds()`, `detect_outliers()`, `handle_outliers()` |
-| 이미지 | `parse_images()`, `add_image_features()`, `add_image_advanced_features()` |
-| 텍스트 | `add_text_features()` |
-| 파생 | `add_amount()` |
-| 통계 | `summary_statistics()`, `correlation()` |
-| RFM | `calculate_rfm()`, `segment_customers()`, `segment_summary()` |
-| 시계열 | `monthly_sales()` |
-| 코호트 | `cohort_retention()` |
+이상치 임계값, 결측치 전략, RFM 기준일처럼 데이터마다 달라질 값은 코드 안에 숫자로 고정하지 않고 인자로 받는다. 
 
-## 3.4 분석 과정과 결과
+| 설정값 | 인자 | 바꾸면 |
+|---|---|---|
+| 이상치 임계값 | `threshold` (기본 1.5) | 3.0으로 올리면 이상치가 550건에서 244건으로 줄어든다. 데이터가 더 치우쳐 있으면 값을 키운다 |
+| 결측치 대치 전략 | `strategy`, `group_col`, `columns` | `group_median`, `group_mean`, `median`, `mode`, `drop` 중 고른다. 다른 데이터에서는 그룹 기준 컬럼만 바꾼다 |
+| RFM 기준일 | `reference_date` | 기본은 마지막 거래일이다. 과거 날짜를 넣으면 그 시점의 RFM을 만들 수 있다 |
+| RFM 점수 구간 수 | `n_score_levels` | 기본 5이다. 고객 수가 적으면 3으로 줄인다 |
+| 컬럼 이름, 이미지 모양 | `customer_col`, `date_col`, `amount_col`, `image_shape` | 컬럼 이름이나 해상도가 다른 데이터에도 코드를 고치지 않고 쓴다 |
 
-### 3.4.1 결측치: 카테고리별 중앙값으로 대치
+- 이점: 같은 클래스를 다른 데이터셋에 적용할 때 코드를 고치지 않고 인자만 바꾼다. 실험(예: 임계값 비교)도 인자 하나로 끝난다.
+
+<br>
+
+## 3.3 분석 과정과 결과
+
+`DataAnalyzer`의 메서드를 순서대로 호출한 과정이다. 결측치를 채워야 주문 금액을 계산할 수 있고, 금액이 있어야 이상치를 찾으므로 결측치 → 멀티모달 피처 → 이상치 → 통계 → 시각화 순서를 지킨다.
+
+### 3.3.1 결측치: 카테고리별 중앙값으로 대치
+
+이 과제에서는 `products.csv`의 빈칸이 `read_csv()`로 읽히면서 `NaN`이 된다.
 - `price` 369개(7.2%), `rating` 566개(11.0%)가 비어 있었다.
 - 카테고리마다 가격 수준이 크게 다르다. `Electronics` 중앙값 184,400원, `Food` 15,600원으로 약 12배 차이다.
 - 그래서 전체 값이 아니라 `category`별 중앙값으로 채웠다. 가격 분포가 오른쪽으로 치우쳐 있어 평균보다 중앙값이 안전하다.
+- 위험
+    - 같은 값으로 채우므로 분산이 줄고, 변수 사이의 상관관계가 약해지거나 그룹 간 차이가 실제보다 커 보일 수 있다.
+    - 채운 뒤 표준편차는 `price` 88,655원에서 87,933원(0.8% 감소), `rating` 0.45에서 0.43(5.2% 감소)으로 줄었다. 결측 비율이 7.2%와 11.0%로 낮아 영향이 작다고 판단했다.
+    - 결측이 더 많거나 특정 상품에 몰려 있으면 영향이 커지고 중앙값 자체가 치우칠 수 있다.
+- 전략을 고른 근거는 [노트북 2장](notebooks/analysis_report.ipynb)에도 적었다.
 
-### 3.4.2 멀티모달 피처: 반복문 없이 벡터 연산
+결측치 구분
+- `NaN`(Not a Number)은 "숫자가 아님"을 뜻하는 특수한 실수(`float`) 값이다. 
+- `0`은 "값이 0"이고 `NaN`은 "값이 없다"이다. 
 
-이미지 문자열이 `image_brightness_mean` 컬럼이 되는 과정을 보여주는 변환 흐름도:
+<br>
+
+### 3.3.2 멀티모달 피처: 반복문 없이 벡터 연산
+
+이미지 문자열이 `image_brightness_mean` 컬럼이 되는 과정
 
 ```mermaid
 flowchart LR
@@ -329,17 +293,36 @@ flowchart LR
     D --> E["image_brightness_mean 컬럼"]
 ```
 
-- 이미지: 모든 행의 픽셀 문자열을 이어 `np.fromstring()`으로 한 번에 읽고 `(5160, 16, 16, 3)`으로 `reshape`했다. `images.mean(axis=(1, 2, 3))` 한 줄로 이미지별 평균을 구한다.
-- 같은 계산을 `for` 반복문과 비교하면 결과는 같고 `벡터 연산`이 약 10배 이상 빠르다. (노트북 3장)
-- 카테고리별 이미지 밝기: `Electronics` 71.7로 가장 어둡고 `Beauty` 205.0으로 가장 밝다.
-- 텍스트: 상품명은 평균 3.0단어, 17.9글자다.
+<br>
 
-### 3.4.3 이상치: IQR로 찾고, 지우지 않고 따로 clip
-- `IQR`(Interquartile Range, 사분위 범위)은 값을 작은 순서로 줄 세웠을 때 가운데 50%가 퍼진 폭이다. `Q1`(25% 지점)과 `Q3`(75% 지점)의 차이 `Q3 - Q1`로 구한다.
-- 정상 범위는 `Q1 - 1.5 x IQR` \~ `Q3 + 1.5 x IQR`이고, 이 범위를 벗어난 값을 이상치로 본다. 1.5는 관례이며 인자 `threshold`로 바꿀 수 있다.
+이미지
+- 모든 행의 픽셀 문자열을 이어 `np.fromstring()`으로 한 번에 읽고 `(5160, 16, 16, 3)`으로 `reshape`했다. `images.mean(axis=(1, 2, 3))` 한 줄로 이미지별 평균을 구한다. ([pipeline.py](src/pipeline.py)의 `parse_images()`, `add_image_features()`)
+- 같은 계산을 `for` 반복문과 비교하면 결과는 같고 `벡터 연산`이 약 10배 이상 빠르다. (노트북 3장) 빠른 이유(연속 메모리, `SIMD`)는 [study.md 18장](study.md#18-분석-방법의-한계-iqr-그룹-대치-simd)에 정리했다.
+- 이미지가 5,160장이라 반복문으로 한 장씩 돌리면 파이썬 반복 비용이 쌓인다. 그래서 전체를 한 배열로 읽고 `axis`로 축을 지정해 한 번에 계산한다.
+
+피처 결과
+- 엣지 강도(`image_edge_strength`, `add_image_advanced_features()`)는 이웃한 픽셀 값 차이의 평균이다. 윤곽이 뚜렷하고 무늬가 복잡한 이미지일수록 커진다.
+- 이미지 밝기는 0(검정)~255(흰색)이다. `Electronics` 71.7로 가장 어둡고 `Beauty` 205.0으로 가장 밝다.
+- 상품명은 평균 3.0단어, 17.9글자다.
+
+<br>
+
+### 3.3.3 이상치: IQR로 찾고, 지우지 않고 따로 clip
+- `IQR`(Interquartile Range, 사분위 범위)은 값을 작은 순서로 줄 세웠을 때 가운데 50%가 퍼진 폭이다. 
+    - `Q1`(25% 지점)과 `Q3`(75% 지점)의 차이 `Q3 - Q1`로 구한다.
+- 정상 범위는 `Q1 - 1.5 x IQR` \~ `Q3 + 1.5 x IQR`이고, 이 범위를 벗어난 값을 이상치로 본다. 
+    - 1.5는 관례이며 인자 `threshold`로 바꿀 수 있다.
 - 평균과 표준편차로 범위를 잡으면 이상치 자신이 평균을 끌어올려 기준이 흔들린다. 사분위수는 순서로 정해져서 극단값에 덜 흔들린다.
+- 잘 맞는 분포
+    - 좌우가 대칭에 가까운 분포이다. 정규분포에서 이 범위는 평균 ±약 2.7 표준편차라서 극단값 약 0.7%만 이상치로 잡는다.
+- 한계
+    - 오른쪽으로 길게 치우친 분포에서는 정상 값도 이상치로 잡는다. 
+    - 이 데이터의 `amount`는 왜도(skewness, 비대칭 정도. 0이면 좌우 대칭, 클수록 오른쪽 꼬리가 길다)가 18.8이라 아래 결과처럼 이상치의 대부분이 정상 주문이었다. 
+    - 이런 데이터에서는 로그 변환 후 IQR, 카테고리별 IQR, 임계값 상향을 쓴다. (경계 계산 코드: [pipeline.py](src/pipeline.py) `get_iqr_bounds()`)
 
-`amount`의 `IQR` 정상 범위를 계산한 과정표:
+<br>
+
+`amount`의 `IQR` 정상 범위 계산 과정
 
 | 단계 | 계산 | 값 |
 |---|---|---|
@@ -353,17 +336,24 @@ flowchart LR
 
 - 위 범위를 벗어나는 이상치는 550건(10.7%)이다. `threshold` 3.0이면 244건(4.7%)으로 줄어든다.
 - 이상치 550건 중 473건(86%)이 `Electronics`다. 비싼 상품의 정상 주문이므로 삭제하지 않았다. 삭제하면 실제 매출이 사라져 `RFM`이 틀어진다.
-- 분포 분석용으로만 `amount_clipped`를 만들었다. 왜도가 18.8에서 1.2로 줄었고 중앙값 48,600원은 그대로다.
+- `clip`은 정상 범위를 넘는 값을 범위의 경계값으로 바꾸는 처리다. (예: 상한 270,262.5원을 넘는 주문은 270,262.5원으로 둔다)
+- 분포 분석용으로만 `amount_clipped`를 만들었다. 판단 과정은 [노트북 4장](notebooks/analysis_report.ipynb)에 적었다. 왜도가 18.8에서 1.2로 줄었고 중앙값 48,600원은 그대로다.
+
+<br>
 
 이상치 처리 전후의 `amount` 분포를 비교한 박스플롯:
 
 ![이상치 처리 전후 박스플롯](docs/figures/boxplot_outlier.png)
 
-### 3.4.4 통계와 상관관계
+<br>
+
+### 3.3.4 통계와 상관관계
 
 - `price`, `amount`는 평균이 중앙값의 2배 이상이다. 비싼 상품과 대량 주문 몇 건이 평균을 끌어올리므로 대표값은 중앙값이 맞다. (`price` 평균 72,975 / 중앙값 35,500, `amount` 평균 118,254 / 중앙값 48,600)
 - `rating`은 가운데 50%가 3.9\~4.3에 몰려 있어 평점으로는 상품을 구분하기 어렵다.
 - 4개 변수 전체 기술통계표는 [docs/analysis_results.md](docs/analysis_results.md#1-기술통계)에 있다.
+
+상관계수는 -1~1 사이 값이다. 1에 가까우면 함께 커지고, -1에 가까우면 한쪽이 커질 때 다른 쪽이 작아지고, 0 근처면 관계가 거의 없다.
 
 변수 5쌍의 상관계수와 해석표:
 
@@ -375,113 +365,128 @@ flowchart LR
 | `price` - `rating` | -0.14 | 거의 관계없다 |
 | `frequency` - `monetary` (고객 단위) | 0.78 | 자주 사는 고객이 돈도 많이 쓴다 |
 
-### 3.4.5 시각화 6종
+<br>
+
+### 3.3.5 시각화 6종
 - 히스토그램, 박스플롯, 막대그래프, 히트맵, 산점도, 라인차트 6종을 [노트북](notebooks/analysis_report.ipynb) 4\~8장에 그렸다. 차트별 내용과 위치는 [docs/analysis_results.md](docs/analysis_results.md#2-시각화-6종)에 있다.
 - 모든 차트에 제목과 축 레이블을 넣었다. 그림 파일은 [docs/figures/](docs/figures/)에 있다.
 - 보너스로 `Plotly` 인터랙티브 차트 2종을 더 만들었다. ([4.3 보너스 과제](#43-보너스-과제-수행-결과))
 
-## 3.5 RFM 고객 세분화
+<br>
 
-### 3.5.1 점수 계산과 세그먼트 판정 규칙
-- 세 지표(`Recency`, `Frequency`, `Monetary`)의 계산 기준은 [1.1.2](#112-고객을-나누는-방법-rfm-분석)와 같다.
+## 3.4 RFM 고객 세분화
+
+3.3에서 만든 주문 금액(`amount`)으로 고객별 `R`, `F`, `M`을 계산하고, 점수를 매겨 6개 세그먼트로 나눴다.
+
 - 고객 1,000명을 지표별로 줄 세워 5등분하고 `R`, `F`, `M` 각각 1\~5점을 준다. 동점 때문에 구간이 깨지지 않게 `rank(method="first")`로 순위를 먼저 매긴다.
+    - 순위로 자르면 구간마다 200명씩 들어가 비교가 쉽다. 3등분은 거칠고 10등분은 구간당 100명이라 관행인 5등분을 골랐다. 고객 수가 적으면 `n_score_levels`로 줄인다.
+- 판정은 표의 순서대로 처음 맞는 조건이 적용된다. `VIP` 조건을 만족하면 `Loyal` 조건도 만족하지만, 1번이 먼저라 `VIP`로 분류된다.
 
-고객 한 명을 위에서부터 차례로 따져서 처음 맞는 세그먼트 하나로 분류하는 판정 규칙표:
+세그먼트 6개의 판정 조건, 고객 수, 평균 지표, 매출 비중과 시사점
 
-| 판정 순서 | 세그먼트 | 조건 | 의미 |
-|---|---|---|---|
-| 1 | `VIP` | R>=4, F>=4, M>=4 | 최근에, 자주, 많이 산다 |
-| 2 | `Loyal` | R>=3, F>=3 | 꾸준히 산다 |
-| 3 | `New` | R>=4, F<=2 | 최근에 처음 샀다 |
-| 4 | `At Risk` | R<=2, F>=3 | 자주 샀지만 최근에 안 온다 |
-| 5 | `Churned` | R<=2, F<=2 | 오래전에 조금 사고 떠났다 |
-| 6 | `Regular` | 위에 모두 해당 없음 | 나머지 |
+| 순서 | 세그먼트 | 조건 | 고객 수 | 평균 `Recency` | 평균 주문 수 | 평균 구매액 | 매출 비중 | 시사점 |
+|---|---|---|---|---|---|---|---|---|
+| 1 | `VIP` | R>=4, F>=4, M>=4 (최근에, 자주, 많이 산다) | 218명 (21.8%) | 32일 | 12.5회 | 1,747,918원 | 62.5% | 고객의 21.8%가 매출의 62.5%를 만든다. 가장 중요한 그룹이다 |
+| 2 | `Loyal` | R>=3, F>=3 (꾸준히 산다) | 213명 (21.3%) | 144일 | 5.5회 | 598,250원 | 20.9% | 평균 구매액이 `VIP`의 약 1/3이다. `VIP`로 올릴 여지가 있다 |
+| 3 | `New` | R>=4, F<=2 (최근에 처음 샀다) | 150명 (15.0%) | 27일 | 1.3회 | 93,447원 | 2.3% | 두 번째 구매로 이어지는지가 관건이다 |
+| 4 | `At Risk` | R<=2, F>=3 (자주 샀지만 최근에 안 온다) | 169명 (16.9%) | 390일 | 4.0회 | 379,222원 | 10.5% | 평균 4회 샀지만 390일째 구매가 없다. 되돌리면 효과가 큰 그룹이다 |
+| 5 | `Churned` | R<=2, F<=2 (오래전에 조금 사고 떠났다) | 231명 (23.1%) | 493일 | 1.5회 | 87,972원 | 3.3% | 가장 큰 그룹이지만 매출 비중이 3.3%라 복귀 가치는 낮다 |
+| 6 | `Regular` | 위에 모두 해당 없음 | 19명 (1.9%) | 185일 | 2.0회 | 173,079원 | 0.5% | 인원과 매출 모두 작아 별도 전략의 우선순위가 낮다 |
 
-- 순서가 중요하다. `VIP` 조건을 만족하면 `Loyal` 조건도 만족하지만, 1번이 먼저라 `VIP`로 분류된다.
-
-### 3.5.2 세그먼트별 결과
-
-세그먼트 6개의 고객 수, 평균 지표, 매출 비중과 시사점 결과표:
-
-| 세그먼트 | 고객 수 | 평균 `Recency` | 평균 주문 수 | 평균 구매액 | 매출 비중 | 시사점 |
-|---|---|---|---|---|---|---|
-| `VIP` | 218명 (21.8%) | 32일 | 12.5회 | 1,747,918원 | 62.5% | 고객의 21.8%가 매출의 62.5%를 만든다. 가장 중요한 그룹이다 |
-| `Loyal` | 213명 (21.3%) | 144일 | 5.5회 | 598,250원 | 20.9% | 꾸준히 사지만 평균 구매액이 `VIP`의 약 1/3이다. `VIP`로 올릴 여지가 있다 |
-| `New` | 150명 (15.0%) | 27일 | 1.3회 | 93,447원 | 2.3% | 최근에 첫 구매를 했다. 두 번째 구매로 이어지는지가 관건이다 |
-| `Regular` | 19명 (1.9%) | 185일 | 2.0회 | 173,079원 | 0.5% | 인원과 매출 모두 작아 별도 전략의 우선순위가 낮다 |
-| `At Risk` | 169명 (16.9%) | 390일 | 4.0회 | 379,222원 | 10.5% | 평균 4회 샀지만 390일째 구매가 없다. 되돌리면 효과가 큰 그룹이다 |
-| `Churned` | 231명 (23.1%) | 493일 | 1.5회 | 87,972원 | 3.3% | 가장 큰 그룹이지만 매출 비중은 3.3%라 복귀 가치는 낮다 |
+<br>
 
 세그먼트별 고객 수와 매출 비중을 비교한 막대그래프:
 
 ![RFM 세그먼트별 고객 수와 매출 비중](docs/figures/bar_segment.png)
 
-- 세그먼트별 상세 분석(선호 카테고리, 점수 분포 히트맵)은 [노트북 7장](notebooks/analysis_report.ipynb)에 있다.
+- 매출 비중이 62.5%, 20.9%, 10.5%, 3.3%, 2.3%, 0.5%로 크게 갈린다. 같은 쿠폰을 모두에게 보내면 안 된다는 것을 숫자가 보여 준다. 세그먼트별 상세 분석(선호 카테고리, 점수 분포 히트맵)은 [노트북 7장](notebooks/analysis_report.ipynb)에 있다.
 
-## 3.6 비즈니스 인사이트
+<br>
 
-### 3.6.1 인사이트 1. 매출의 62.5%를 고객 21.8%(VIP)가 만든다
-- (근거) `VIP` 218명이 전체 매출 6억 1,019만 원 중 3억 8,105만 원(62.5%)을 만든다. `VIP`와 `Loyal`을 합치면 고객 43.1%가 매출 83.3%를 만든다. `VIP` 매출의 69.9%는 `Electronics`다.
-- (실행) 대상: `VIP` 218명. 방법: 전자기기 신제품 선공개, 무료 배송과 전용 쿠폰이 있는 등급 멤버십을 운영한다. 기대 효과: `VIP` 매출은 1인당 약 175만 원이므로, 이탈을 10%(22명)만 막아도 약 3,800만 원의 매출을 지킬 수 있다.
-- (검증) 매출은 이익이 아니다. 멤버십 비용 대비 효과를 보려면 상품별 마진 데이터가 추가로 필요하고, 혜택 유무로 나눈 `A/B 테스트`로 효과를 확인해야 한다.
+## 3.5 비즈니스 인사이트
 
-### 3.6.2 인사이트 2. At Risk 169명은 "돌아오면 가장 큰 그룹"이다
-- (근거) `At Risk` 고객은 1인당 평균 379,222원을 썼고 평균 4.0회 샀지만, 평균 390일째 구매가 없다. 이들의 누적 매출은 6,409만 원(10.5%)으로 `New`(2.3%)와 `Churned`(3.3%)를 합친 것보다 크다.
-- (실행) 대상: `At Risk` 169명. 방법: 과거 구매 카테고리(이들 매출의 44.4%가 `Electronics`)에 맞춘 개인화 복귀 쿠폰과 신상품 알림을 보낸다. 기대 효과: 20%(34명)가 돌아와 평균 주문 금액(95,228원)으로 2번만 사도 약 650만 원의 추가 매출이 생긴다.
-- (검증) 이 데이터에는 이탈 이유가 없다. 가격, 품질, 경쟁사 중 무엇 때문인지 알려면 이탈 설문이나 고객센터 문의 기록이 필요하다. 쿠폰 없이도 돌아올 고객을 구분하려면 쿠폰을 보내지 않는 대조군이 필요하다.
+3.3과 3.4의 결과에서 인사이트 4개를 뽑았다. 표의 숫자는 모두 노트북 실행 결과다.
 
-### 3.6.3 인사이트 3. 첫 구매 후 3개월 안에 고객이 가장 많이 빠진다
-- (근거) `코호트` 분석에서 첫 구매 1개월 뒤 평균 재구매율은 38%, 3개월 뒤 25%, 6개월 뒤 19%다. `New` 150명은 평균 1.3회만 샀고, `R`-`F` 히트맵에서 최근 고객(`R` 4\~5점) 중 95명이 아직 `F` 1점이다.
+인사이트별 근거 수치
 
-첫 구매 월(행)별로 경과 개월(열)마다 재구매한 고객 비율을 보여주는 코호트 히트맵:
+| 번호 | 인사이트 | 근거 |
+|---|---|---|
+| 1 | 매출의 62.5%를 고객 21.8%(`VIP`)가 만든다 | `VIP` 218명이 전체 매출 6억 1,019만 원 중 3억 8,105만 원을 만든다. `VIP`와 `Loyal`을 합치면 고객 43.1%가 매출 83.3%를 만들고, `VIP` 매출의 69.9%는 `Electronics`다 |
+| 2 | `At Risk` 169명은 돌아오면 가장 큰 그룹이다 | 평균 4.0회, 1인당 379,222원을 썼지만 평균 390일째 구매가 없다. 누적 매출 6,409만 원(10.5%)은 `New`(2.3%)와 `Churned`(3.3%)를 합친 것보다 크다 |
+| 3 | 첫 구매 후 3개월 안에 고객이 가장 많이 빠진다 | `코호트`(같은 시기에 처음 산 고객 묶음)의 재구매율이 1개월 뒤 38%, 3개월 뒤 25%, 6개월 뒤 19%다. `New` 150명은 평균 1.3회만 샀다 |
+| 4 | 11\~12월 두 달이 2년 매출의 29.4%를 만든다 | 전체 기간의 1/6이다. 2024년 11\~12월 월평균 매출은 같은 해 1\~10월 월평균(1,557만 원)의 3.3배, 2025년은 1.4배다 |
 
-![코호트 재구매율](docs/figures/heatmap_cohort.png)
+<br>
 
-- (실행) 대상: `New` 150명. 방법: 첫 구매 7일 뒤와 21일 뒤에 두 번째 구매 쿠폰과 첫 구매 카테고리 연관 상품 추천을 보낸다. 기대 효과: 1개월 재구매율을 38%에서 45%로 올리는 것을 목표로 한다. `New`가 `Loyal`로 넘어가면 1인 평균 구매액이 93,447원에서 598,250원 수준으로 커진다.
-- (검증) 2025-07 \~ 2025-10에는 첫 구매 고객이 한 명도 없다. 신규 유입이 왜 끊겼는지, 어떤 채널로 들어온 고객이 재구매를 잘하는지 알려면 유입 채널, 광고 집행 데이터가 추가로 필요하다.
+## 3.6 노트북 리포트와 제안 전략
 
-### 3.6.4 인사이트 4. 11\~12월 두 달이 2년 매출의 29.4%를 만든다
-- (근거) 11\~12월은 전체 기간의 1/6이지만 매출의 29.4%를 차지한다. 2024년 11\~12월 월평균 매출은 같은 해 1\~10월 월평균(1,557만 원)의 3.3배, 2025년은 1.4배다. 월 최고 매출은 2024-12의 5,664만 원이다.
+위 분석과 차트는 [노트북](notebooks/analysis_report.ipynb) 10장 리포트로 정리했다. 인사이트마다 실행 방안과 검증 방법을 아래처럼 제안한다.
 
-월별 매출 추이를 보여주는 라인차트 (11\~12월에 솟는 모양을 확인):
+인사이트별 실행 방안과 검증에 필요한 것
 
-![월별 매출 추이](docs/figures/line_monthly.png)
+| 번호 | 대상 | 실행 방안 | 검증에 필요한 것 |
+|---|---|---|---|
+| 1 | `VIP` 218명 | 전자기기 신제품 선공개, 무료 배송과 전용 쿠폰이 있는 등급 멤버십을 운영한다. 이탈을 10%(22명)만 막아도 약 3,800만 원의 매출을 지킨다 | 매출은 이익이 아니므로 상품별 마진(판매가에서 원가를 뺀 이익), 혜택 유무로 고객을 무작위로 나눠 비교하는 `A/B 테스트` |
+| 2 | `At Risk` 169명 | 과거 구매 카테고리(매출의 44.4%가 `Electronics`)에 맞춘 복귀 쿠폰과 신상품 알림을 보낸다. 20%(34명)가 평균 주문 금액 95,228원으로 2번 사면 약 650만 원이 늘어난다 | 이탈 이유(설문, 문의 기록), 쿠폰 없이 돌아올 고객을 가릴 대조군(쿠폰을 보내지 않고 남겨 두는 고객 집단) |
+| 3 | `New` 150명 | 첫 구매 7일, 21일 뒤에 두 번째 구매 쿠폰과 연관 상품 추천을 보내 1개월 재구매율을 38%에서 45%로 올린다 | 2025-07\~10에 첫 구매 고객이 없는 이유를 알 유입 채널, 광고 집행 데이터 |
+| 4 | 전체 (`VIP`, `Loyal` 중심) | 10월에 `Electronics` 재고를 미리 확보하고 사전 예약 이벤트를 연다 | 2025년 상승 폭이 작은 이유(3.3배 → 1.4배)를 가릴 3년 이상의 데이터와 프로모션 일정 |
 
-- (실행) 대상: 전체 고객, 특히 구매 금액이 큰 `VIP`와 `Loyal`. 방법: 10월에 `Electronics` 재고를 미리 확보하고 사전 예약 이벤트를 연다. 기대 효과: 품절로 놓치는 연말 매출을 줄이고, 성수기 수요를 앞당겨 받는다.
-- (검증) 2025년은 2024년보다 연말 상승 폭이 작다(3.3배 → 1.4배). 2025년 평소 매출이 올라서인지 연말 수요가 줄어서인지 구분하려면 3년 이상의 데이터와 프로모션 일정 데이터가 필요하다.
+<br>
+
+- 가장 먼저 실행할 세그먼트는 `At Risk`다. 1인당 379,222원을 쓴 검증된 고객이 평균 390일째 안 오고, 더 늦으면 `Churned`(평균 493일째, 1인당 87,972원)로 넘어가 되돌리기 어렵다. `VIP`는 평균 32일 전에 구매해 급하지 않다.
+- 리스크: 쿠폰이 없어도 돌아올 고객에게 할인만 주면 비용만 늘고, 매출이 늘어도 마진이 낮으면 이익이 아닐 수 있다.
+
+<br>
+
+## 3.7 데이터가 커질 때의 한계와 확장 방향
+
+- 가장 먼저 막히는 곳은 이미지 읽기([pipeline.py](src/pipeline.py) `parse_images()`)이다.
+    - 이미지 한 장이 768개 값에서 3,145,728개 값(1024x1024x3)으로 4,096배 커지고, 100만 장이면 약 3.1TB라 메모리에 올릴 수 없다.
+- 고객 단위 계산(`calculate_rfm()`)은 가상 데이터(고객 약 99만 명, 주문 500만 건)에서 1.09초라 병목이 아니다.
+- 개선 방법: 이미지 피처를 상품 단위로 한 번만 계산하고, 이미지를 파일로 저장해 묶음(chunk)으로 읽는다.
+- 머신러닝으로 확장하면 "기준일 이후 90일 동안 구매가 없는가"를 타겟으로 두고, `recency`에서 나온 `r_score`, `segment`는 데이터 누수(Data Leakage)라 피처에서 뺀다.
+- 크기 계산표, 개선 방법 우선순위, 예측 모델 설계 전체는 [docs/scale_up.md](docs/scale_up.md)에 있다.
 
 <br>
 <br>
 
 # 4. 최종 결과물
 
-과제가 요구한 항목마다 결과물과 위치를 정리했다. 구현 요구사항(메서드, 차트, 인사이트)은 [1.4 프로젝트 구조](#14-프로젝트-구조)의 파일별 역할 표에 있다. `./demo.sh`를 실행하면 금지 라이브러리 검사, 단위 테스트, 데이터 생성, 파이프라인 실행, 노트북 재실행이 순서대로 자동 수행된다.
+과제가 요구한 항목마다 결과물과 위치를 정리했다. 상세 구현은 [3장 구현](#3-구현)에 있다. `./demo.sh`를 실행하면 금지 라이브러리 검사, 단위 테스트, 데이터 생성, 파이프라인 실행, 노트북 재실행이 순서대로 자동 수행된다.
+
+<br>
 
 ## 4.1 데이터 요구사항 결과
 
 | 요구사항 | 결과 | 확인 위치 |
 |---|---|---|
 | 1,000건 이상, 8개 컬럼 이상 | 5,160건, 13개 컬럼 | `data/orders.csv`, `data/products.csv` |
-| 수치, 범주, 날짜, 이미지 중 3가지 이상 | 5가지 (텍스트 포함) | [3.2.2](#322-데이터-항목컬럼과-합성-규칙), [데이터 설명](docs/data_description.md) |
+| 수치, 범주, 날짜, 이미지 중 3가지 이상 | 5가지 (텍스트 포함) | [3.1](#31-data), [데이터 설명](docs/data_description.md) |
 | `info()`, `describe()`, `head()`와 해석 | 실행하고 해석함 | 노트북 1장 |
 | `RFM`용 `customer_id`, `order_date`, `amount` | 모두 있음 | `add_amount()` |
 | `Recency` 기준일 = 최종 거래일 | 2025-12-31 | `calculate_rfm(reference_date=None)` |
-| 데이터 출처 | 합성 데이터, 생성 규칙 공개 | 3.2.1, [합성 규칙](docs/data_description.md#2-합성-데이터를-만든-규칙) |
+| 데이터 출처 | 합성 데이터, 생성 규칙 공개 | [3.1](#31-data), [합성 규칙](docs/data_description.md#2-합성-데이터를-만든-규칙) |
 
-## 4.2 사용 제한 라이브러리 준수 결과
+<br>
 
-같은 일을 하는 쓴 라이브러리와 금지 라이브러리를 나란히 비교한 표:
+## 4.2 기능 요구사항 결과
 
-| 하는 일 | 사용한 라이브러리와 용도 | 금지 라이브러리와 용도 (쓰지 않음) |
+요구사항별 구현 결과와 README 안의 위치
+
+| 요구사항 | 결과 | 위치 |
 |---|---|---|
-| 이미지 처리 | `NumPy`: `np.fromstring`으로 픽셀 문자열 복구, `mean(axis=...)`로 밝기 평균, `arr[:, ::n, ::n]`으로 축소, `np.diff`로 엣지 강도 | `OpenCV`, `Pillow`: 이미지 파일 읽기, 크기 조절, 필터, 엣지 검출을 함수 하나로 처리 |
-| 머신러닝, 점수화 | `Pandas`: `pd.qcut`, `rank`로 `RFM` 1~5점 계산, `NumPy`: `np.select`로 세그먼트 분류 | `Scikit-learn`: 스케일링, 군집화(`KMeans`) 같은 완성된 모델과 전처리 도구 |
-| 텍스트(NLP) | `Pandas`: `str.split`, `str.len`으로 단어 수와 글자 수 | `NLTK`: 토큰화, 불용어 제거, 형태소 분석 등 자연어 처리 도구 |
-| 자동 EDA | `Pandas`: `info`, `describe`, `quantile`, `corr`로 직접 요약과 상관 계산, `Matplotlib`, `Seaborn`: 차트 직접 작성 | `pandas-profiling`, `sweetviz`: 데이터 한 줄 입력으로 통계와 차트 리포트를 자동 생성 |
-| 시각화 | `Matplotlib`, `Seaborn`: 필수 차트 6종, `Plotly`: 보너스 인터랙티브 차트 2종 | 금지 없음 |
+| `DataAnalyzer` 클래스와 필수 메서드 4개(`load_data`, `handle_missing_values`, `detect_outliers`, `calculate_rfm`) | 모두 구현 (전체 메서드 18개) | [3.2](#32-분석-클래스-dataanalyzer-구성) |
+| 이상치 임계값, 결측치 전략을 메서드 인자로 받기 | `threshold`, `strategy` 등 인자로 설계 | [3.2.1](#321-설정값을-인자로-받는-이유) |
+| 이미지 평균·표준편차를 반복문 없이 계산, 텍스트 파생 변수 | `axis` 연산, 단어 수와 글자 수 컬럼 추가 | [3.3.2](#332-멀티모달-피처-반복문-없이-벡터-연산) |
+| 결측치 현황 파악, 그룹별 통계 대치 | 카테고리별 중앙값 대치 | [3.3.1](#331-결측치-카테고리별-중앙값으로-대치) |
+| `IQR` 이상치 탐지, 처리 전후 분포 시각화 | 550건 탐지, 전후 박스플롯 | [3.3.3](#333-이상치-iqr로-찾고-지우지-않고-따로-clip) |
+| 평균·중앙값·표준편차·사분위수, 상관계수 2쌍 이상 | 4개 변수 통계, 5쌍 상관 | [3.3.4](#334-통계와-상관관계) |
+| 차트 6종(제목, 축 레이블 포함) | 6종 모두 작성 | [3.3.5](#335-시각화-6종) |
+| `RFM` 4개 이상 그룹 | 6개 그룹 | [3.4](#34-rfm-고객-세분화) |
+| 인사이트 3개 이상 (근거, 실행, 검증) | 4개 | [3.5](#35-비즈니스-인사이트), [3.6](#36-노트북-리포트와-제안-전략) |
+| 단계별 마크다운 설명이 있는 노트북 | 1~10장 | [노트북](notebooks/analysis_report.ipynb) |
 
-- `Plotly`는 보너스 차트에서만 쓴다. 필수 구현은 `NumPy`, `Pandas`, `Matplotlib`, `Seaborn`만 쓴다.
-- `demo.sh` 1단계에서 금지 라이브러리 `import` 여부를 자동으로 검사한다.
+<br>
 
 ## 4.3 보너스 과제 수행 결과
 
