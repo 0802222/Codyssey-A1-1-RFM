@@ -259,8 +259,8 @@ def make_products(rng: np.random.Generator) -> pd.DataFrame:
     # 등록일 범위의 시작
     first_register_date = pd.Timestamp("2023-06-01")
 
-    # 등록일 범위의 끝
-    last_register_date = pd.Timestamp("2025-10-31")
+    # 등록일 범위의 끝 (첫 주문일 전날. 등록 전에 주문되는 일이 없게 한다)
+    last_register_date = START_DATE - pd.Timedelta(days=1)
 
     # 등록일 범위의 일 수
     register_span_days = (last_register_date - first_register_date).days

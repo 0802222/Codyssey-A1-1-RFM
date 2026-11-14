@@ -162,6 +162,29 @@ class TestGenerateOutput(unittest.TestCase):
                     with open(os.path.join(DATA_DIR, name), "rb") as old_file:
                         self.assertEqual(new_file.read(), old_file.read(), name)
 
+    # 상품 등록일이 그 상품의 모든 주문일보다 늦지 않은지 테스트
+    def test_registered_before_orders(self) -> None:
+        # 저장된 주문 표를 읽는다
+        orders = pd.read_csv(
+            os.path.join(DATA_DIR, "orders.csv"), parse_dates=["order_date"]
+        )
+
+        # 저장된 상품 표를 읽는다
+        products = pd.read_csv(
+            os.path.join(DATA_DIR, "products.csv"), parse_dates=["registered_date"]
+        )
+
+        # 주문마다 그 상품의 등록일을 붙인다
+        merged = orders.merge(products, on="product_id", how="left")
+
+        # 등록 전에 주문된 건수를 센다
+        orders_before_register_count = int(
+            (merged["order_date"] < merged["registered_date"]).sum()
+        )
+
+        # 등록 전 주문이 하나도 없어야 한다
+        self.assertEqual(orders_before_register_count, 0)
+
 
 # 이 파일을 직접 실행했을 때만
 if __name__ == "__main__":
