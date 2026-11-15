@@ -13,22 +13,17 @@
 실행: python -m data.generate_data  (프로젝트 최상위 폴더에서)
 """
 
-# 파일 경로를 다루는 기본 모듈
 import os
 
 # 이름 붙은 묶음(튜플)을 만드는 도구
 from typing import NamedTuple
 
-# 배열 계산 라이브러리
 import numpy as np
-
-# 표(DataFrame) 처리 라이브러리
 import pandas as pd
 
-# 공통 상수: 저장 폴더, 이미지 모양
 from src.constants import DATA_DIR, IMAGE_SHAPE
 
-# 난수 시드(Seed). 같은 값이면 항상 같은 데이터가 나온다. 42는 개발자 관습값이다
+# 난수 시드(Seed). 같은 값이면 항상 같은 데이터가 나온다. (42는 개발자 관습값이다)
 SEED = 42
 
 # 만들 상품 수
@@ -46,17 +41,17 @@ START_DATE = pd.Timestamp("2024-01-01")
 # 주문 기간 마지막일
 END_DATE = pd.Timestamp("2025-12-31")
 
-# 가격을 빈 값으로 만들 비율 (6%)
-PRICE_MISSING_RATE = 0.06
+# 가격을 빈 값으로 만들 비율 (5%)
+PRICE_MISSING_RATE = 0.05
 
 # 평점을 빈 값으로 만들 비율 (10%)
 RATING_MISSING_RATE = 0.10
 
-# 모든 주문이 대량 주문(이상치)이 될 확률 (1.5%)
-BULK_ORDER_RATE = 0.015
+# 모든 주문이 대량 주문(이상치)이 될 확률 (2%)
+BULK_ORDER_RATE = 0.02
 
-# Food, Books 주문이 대량 주문이 될 추가 확률 (2%)
-BULK_ORDER_EXTRA_RATE = 0.02
+# Food, Books 주문이 대량 주문이 될 추가 확률 (3%)
+BULK_ORDER_EXTRA_RATE = 0.03
 
 # 대량 주문이 더 잘 나오는 카테고리
 BULK_PRONE_CATEGORIES = ("Food", "Books")
@@ -66,7 +61,7 @@ BULK_PRONE_CATEGORIES = ("Food", "Books")
 class NameParts(NamedTuple):
     """카테고리 하나의 상품명 재료."""
 
-    # 꾸미는 말 목록
+    # 형용사 목록
     adjectives: list[str]
 
     # 물건 이름 목록
@@ -103,7 +98,7 @@ CATEGORIES = {
     "Books": {"base_price": 18000, "base_color": (120, 160, 200)},
 }
 
-# 카테고리별 상품명 재료
+# 카테고리별 상품명 재료 (형용사 + 물건 이름)
 NAME_PARTS = {
     "Electronics": NameParts(
         ["Wireless", "Smart", "Portable", "Ultra", "Pro"],
@@ -134,11 +129,11 @@ NAME_PARTS = {
 # 고객 유형별 행동 규칙
 CUSTOMER_TYPES = {
     # 단골: 많이, 자주, 전자기기 선호
-    "vip": CustomerType(0.08, 18, [0.40, 0.20, 0.15, 0.10, 0.10, 0.05]),
+    "vip": CustomerType(0.10, 15, [0.40, 0.20, 0.15, 0.10, 0.10, 0.05]),
     # 충성: 꾸준히 구매
     "loyal": CustomerType(0.20, 8, [0.20, 0.25, 0.20, 0.15, 0.10, 0.10]),
     # 일반: 가끔 구매
-    "regular": CustomerType(0.32, 3, [0.10, 0.25, 0.20, 0.15, 0.20, 0.10]),
+    "regular": CustomerType(0.30, 3, [0.10, 0.25, 0.20, 0.15, 0.20, 0.10]),
     # 신규: 최근에 처음 구매
     "new": CustomerType(0.15, 0.5, [0.10, 0.25, 0.20, 0.15, 0.20, 0.10]),
     # 이탈: 일찍 떠남
@@ -149,33 +144,36 @@ CUSTOMER_TYPES = {
 REGIONS = ["Seoul", "Gyeonggi", "Busan", "Incheon", "Daegu", "Daejeon", "Gwangju"]
 
 # 지역별 뽑힐 확률 (합 1)
-REGION_PROBS = [0.30, 0.27, 0.12, 0.10, 0.08, 0.07, 0.06]
+REGION_PROBS = [0.30, 0.25, 0.15, 0.10, 0.10, 0.05, 0.05]
 
 # 결제 수단 4가지
 PAYMENTS = ["Card", "Kakao Pay", "Naver Pay", "Bank Transfer"]
 
 # 결제 수단별 뽑힐 확률 (합 1)
-PAYMENT_PROBS = [0.50, 0.22, 0.20, 0.08]
+PAYMENT_PROBS = [0.50, 0.20, 0.20, 0.10]
 
 
-# 카테고리에 맞는 상품명(꾸미는 말 + 물건 이름 + 에디션)을 만든다.
+# 카테고리에 맞는 상품명(형용사 + 물건 이름 + 에디션)을 만든다.
 def make_names(rng: np.random.Generator, product_categories: np.ndarray) -> list[str]:
-    # 상품명 앞부분(꾸미는 말)
+    # 1. 상품명 앞부분(형용사)
+    # python 의 random.choice(리스트)는 난수를 1개만 뽑지만,
+    # numpy 의 rng.choice(리스트, size=N)는 난수를 size=N개 뽑을 수 있고,
+    # p(확률)도 줄 수 있다.
     adjectives = [
         rng.choice(NAME_PARTS[name].adjectives) for name in product_categories
     ]
 
-    # 상품명 중간(물건 이름)
+    # 2. 상품명 중간(물건 이름)
     nouns = [rng.choice(NAME_PARTS[name].nouns) for name in product_categories]
 
-    # 상품명 뒷부분(에디션)
+    # 3. 상품명 뒷부분(에디션)
     editions = rng.choice(
-        ["", " Mini", " Plus", " Edition 2", " Gift Set"],
-        size=N_PRODUCTS,
-        p=[0.5, 0.15, 0.15, 0.1, 0.1],
+        ["", " Mini", " Plus", " Edition 2", " Gift Set"],  # 후보
+        size=N_PRODUCTS,  # 뽑을 개수
+        p=[0.5, 0.15, 0.15, 0.1, 0.1],  # 뽑힐 확률 (합 1)
     )
 
-    # 세 부분을 이어 상품명을 만든다
+    # 세 부분을 결합해 상품명을 만든다.
     return [
         f"{adjective} {noun}{edition}"
         for adjective, noun, edition in zip(adjectives, nouns, editions)
@@ -349,7 +347,7 @@ def activity_period(
         first_order_date = START_DATE + pd.Timedelta(days=int(rng.integers(0, 365)))
 
         # 끝나기 직전까지 활동한다
-        last_active_date = END_DATE - pd.Timedelta(days=int(rng.integers(0, 25)))
+        last_active_date = END_DATE - pd.Timedelta(days=int(rng.integers(0, 30)))
 
     # 첫 구매일과 마지막 활동일을 돌려준다
     return first_order_date, last_active_date

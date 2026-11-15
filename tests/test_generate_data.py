@@ -137,6 +137,95 @@ class TestOrderHelpers(unittest.TestCase):
         )
 
 
+# 생성 설정값(상수) 테스트: 5% 단위로 깔끔하게 정한 값이 유지되는지 확인한다
+class TestGenerationSettings(unittest.TestCase):
+    # 고객 유형별 고객 비율 테스트
+    def test_customer_type_shares(self) -> None:
+        # 유형별 고객 비율을 꺼낸다
+        shares = {
+            name: rule.share for name, rule in generate_data.CUSTOMER_TYPES.items()
+        }
+
+        # 기대하는 비율 (모두 5% 단위)
+        expected_shares = {
+            "vip": 0.10,
+            "loyal": 0.20,
+            "regular": 0.30,
+            "new": 0.15,
+            "churned": 0.25,
+        }
+
+        # 유형 이름과 비율이 기대와 같다
+        self.assertEqual(shares, expected_shares)
+
+        # 비율의 합은 1이다
+        self.assertAlmostEqual(sum(shares.values()), 1.0)
+
+    # 고객 유형별 추가 주문 평균 테스트
+    def test_customer_type_extra_order_means(self) -> None:
+        # 유형별 추가 주문 평균을 꺼낸다
+        extra_order_means = {
+            name: rule.extra_order_mean
+            for name, rule in generate_data.CUSTOMER_TYPES.items()
+        }
+
+        # 기대하는 평균 (평균 주문 횟수는 여기에 1을 더한 값)
+        expected_means = {
+            "vip": 15,
+            "loyal": 8,
+            "regular": 3,
+            "new": 0.5,
+            "churned": 1,
+        }
+
+        # 유형별 평균이 기대와 같다
+        self.assertEqual(extra_order_means, expected_means)
+
+    # 카테고리 선호도 합 테스트
+    def test_category_weights_sum_to_one(self) -> None:
+        # 고객 유형마다 확인한다
+        for rule in generate_data.CUSTOMER_TYPES.values():
+            # 카테고리 6개의 선호도 합은 1이다
+            self.assertAlmostEqual(sum(rule.category_weights), 1.0)
+
+    # 결측 비율과 대량 주문 비율 테스트
+    def test_missing_and_bulk_rates(self) -> None:
+        # 가격 결측 비율은 5%다
+        self.assertEqual(generate_data.PRICE_MISSING_RATE, 0.05)
+
+        # 평점 결측 비율은 10%다
+        self.assertEqual(generate_data.RATING_MISSING_RATE, 0.10)
+
+        # 대량 주문 기본 확률은 2%다
+        self.assertEqual(generate_data.BULK_ORDER_RATE, 0.02)
+
+        # Food, Books 추가 확률은 3%다
+        self.assertEqual(generate_data.BULK_ORDER_EXTRA_RATE, 0.03)
+
+    # 지역, 결제 수단 확률 테스트
+    def test_region_and_payment_probs(self) -> None:
+        # 지역 확률은 5% 단위이고 합이 1이다
+        self.assertEqual(
+            generate_data.REGION_PROBS, [0.30, 0.25, 0.15, 0.10, 0.10, 0.05, 0.05]
+        )
+
+        # 결제 수단 확률은 5% 단위이고 합이 1이다
+        self.assertEqual(generate_data.PAYMENT_PROBS, [0.50, 0.20, 0.20, 0.10])
+
+    # VIP, 충성 고객의 마지막 활동일 테스트
+    def test_vip_last_active_within_30_days(self) -> None:
+        # 난수 생성기 (Random Number Generator)
+        rng = np.random.default_rng(0)
+
+        # 여러 번 뽑아서 확인한다
+        for _ in range(100):
+            # VIP의 마지막 활동일을 정한다
+            _, last_date = generate_data.activity_period(rng, "vip")
+
+            # 끝나기 30일 안까지 활동한다
+            self.assertLess((generate_data.END_DATE - last_date).days, 30)
+
+
 # 생성 결과 전체 테스트
 class TestGenerateOutput(unittest.TestCase):
     # 저장된 CSV와 같은지 테스트
