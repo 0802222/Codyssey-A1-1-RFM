@@ -10,6 +10,14 @@
     data/orders.csv    주문 약 5,000건 (실제 5,160건)
         (주문번호, 고객, 주문일, 상품, 수량, 지역, 결제수단)
 
+자료형 표기 (코드 주석의 [대괄호] 라벨)
+    [식별자]  행을 구분하는 번호 (product_id, order_id, customer_id)
+    [수치형]  크기를 비교하고 계산하는 숫자 (price, rating, quantity)
+    [범주형]  정해진 몇 가지 값 중 하나 (category, region, payment_method)
+    [날짜형]  날짜 (registered_date, order_date)
+    [텍스트]  자유로운 글 (product_name)
+    [이미지]  픽셀 숫자 배열 (image_pixels)
+
 실행: python -m data.generate_data  (프로젝트 최상위 폴더에서)
 """
 
@@ -87,7 +95,7 @@ class CustomerType(NamedTuple):
     category_weights: list[float]
 
 
-# 카테고리별 기준 가격(원)과 이미지 기본 색(RGB)
+# [범주형] 카테고리 6가지. 카테고리별 기준 가격(원)과 이미지 기본 색(RGB)
 CATEGORIES = {
     # 전자기기: 비싸고 어두운 색
     "Electronics": {"base_price": 180000, "base_color": (90, 100, 120)},
@@ -103,7 +111,7 @@ CATEGORIES = {
     "Books": {"base_price": 18000, "base_color": (120, 160, 200)},
 }
 
-# 카테고리별 상품명 재료
+# [텍스트] 카테고리별 상품명 재료
 NAME_PARTS = {
     "Electronics": NameParts(
         ["Wireless", "Smart", "Portable", "Ultra", "Pro"],
@@ -145,20 +153,20 @@ CUSTOMER_TYPES = {
     "churned": CustomerType(0.25, 1, [0.05, 0.25, 0.20, 0.15, 0.25, 0.10]),
 }
 
-# 지역 7곳
+# [범주형] 지역 7곳
 REGIONS = ["Seoul", "Gyeonggi", "Busan", "Incheon", "Daegu", "Daejeon", "Gwangju"]
 
 # 지역별 뽑힐 확률 (합 1)
 REGION_PROBS = [0.30, 0.27, 0.12, 0.10, 0.08, 0.07, 0.06]
 
-# 결제 수단 4가지
+# [범주형] 결제 수단 4가지
 PAYMENTS = ["Card", "Kakao Pay", "Naver Pay", "Bank Transfer"]
 
 # 결제 수단별 뽑힐 확률 (합 1)
 PAYMENT_PROBS = [0.50, 0.22, 0.20, 0.08]
 
 
-# 카테고리에 맞는 상품명(꾸미는 말 + 물건 이름 + 에디션)을 만든다.
+# [텍스트] 카테고리에 맞는 상품명(꾸미는 말 + 물건 이름 + 에디션)을 만든다.
 def make_names(rng: np.random.Generator, product_categories: np.ndarray) -> list[str]:
     # 상품명 앞부분(꾸미는 말)
     adjectives = [
@@ -182,7 +190,7 @@ def make_names(rng: np.random.Generator, product_categories: np.ndarray) -> list
     ]
 
 
-# 상품마다 16x16 RGB 이미지를 만든다.
+# [이미지] 상품마다 16x16 RGB 이미지를 만든다.
 #
 # 카테고리 기본색 + 가로 그라데이션 + 상품마다 다른 노이즈를 더한다.
 # 비싼 상품일수록 어둡게 만들어 가격과 밝기 사이에 약한 관계를 둔다.
@@ -242,7 +250,7 @@ def make_products(rng: np.random.Generator) -> pd.DataFrame:
     # 카테고리 이름 목록
     category_names = list(CATEGORIES)
 
-    # 상품마다 카테고리를 무작위로 정한다
+    # [범주형] 상품마다 카테고리를 무작위로 정한다
     product_categories = rng.choice(category_names, size=N_PRODUCTS)
 
     # 상품마다 카테고리 기준 가격을 가져온다
@@ -250,10 +258,10 @@ def make_products(rng: np.random.Generator) -> pd.DataFrame:
         [CATEGORIES[name]["base_price"] for name in product_categories]
     )
 
-    # 기준 가격에 무작위 배수를 곱하고 100원 단위로 반올림한다
+    # [수치형] 기준 가격에 무작위 배수를 곱하고 100원 단위로 반올림한다
     prices = np.round(base_prices * rng.lognormal(0, 0.45, N_PRODUCTS), -2)
 
-    # 상품명을 만든다
+    # [텍스트] 상품명을 만든다
     product_names = make_names(rng, product_categories)
 
     # 등록일 범위의 시작
@@ -265,33 +273,33 @@ def make_products(rng: np.random.Generator) -> pd.DataFrame:
     # 등록일 범위의 일 수
     register_span_days = (last_register_date - first_register_date).days
 
-    # 범위 안에서 무작위 등록일
+    # [날짜형] 범위 안에서 무작위 등록일
     registered_dates = first_register_date + pd.to_timedelta(
         rng.integers(0, register_span_days, N_PRODUCTS), unit="D"
     )
 
-    # 평균 4.1 근처 평점을 1~5로 자르고 소수 1자리로 맞춘다
+    # [수치형] 평균 4.1 근처 평점을 1~5로 자르고 소수 1자리로 맞춘다
     ratings = np.clip(rng.normal(4.1, 0.45, N_PRODUCTS), 1, 5).round(1)
 
-    # 이미지를 만든다
+    # [이미지] 이미지를 만든다
     images = make_images(rng, product_categories, prices)
 
     products = pd.DataFrame(
         # 상품 표를 만든다
         {
-            # 상품 번호: P0001, P0002, ...
+            # [식별자] 상품 번호: P0001, P0002, ...
             "product_id": [f"P{number:04d}" for number in range(1, N_PRODUCTS + 1)],
-            # 상품명
+            # [텍스트] 상품명
             "product_name": product_names,
-            # 카테고리
+            # [범주형] 카테고리 (6가지 중 하나)
             "category": product_categories,
-            # 가격
+            # [수치형] 가격 (연속값, 일부 결측)
             "price": prices,
-            # 평점
+            # [수치형] 평점 (연속값, 1~5, 일부 결측)
             "rating": ratings,
-            # 등록일을 문자열로 바꿔 저장한다
+            # [날짜형] 등록일을 문자열로 바꿔 저장한다
             "registered_date": registered_dates.strftime("%Y-%m-%d"),
-            # 이미지를 768개 숫자를 공백으로 이은 문자열로 저장한다
+            # [이미지] 16x16 RGB를 768개 숫자로 펴서 공백으로 이은 문자열로 저장한다
             "image_pixels": [" ".join(map(str, image.ravel())) for image in images],
         }
     )
@@ -303,7 +311,7 @@ def make_products(rng: np.random.Generator) -> pd.DataFrame:
     return products
 
 
-# 날짜별 주문 가중치를 정한다
+# [날짜형] 날짜별 주문 가중치를 정한다
 # 11~12월은 더 많이, 2월은 조금 적게 주문이 들어오게 하는 가중치.
 def seasonal_weight(dates: pd.DatetimeIndex) -> np.ndarray:
     # 날짜에서 월만 꺼낸다
@@ -313,7 +321,7 @@ def seasonal_weight(dates: pd.DatetimeIndex) -> np.ndarray:
     return np.where(month.isin([11, 12]), 1.8, np.where(month == 2, 0.8, 1.0))
 
 
-# 고객 유형별 활동 기간(첫 구매일, 마지막 활동일)을 정한다.
+# [날짜형] 고객 유형별 활동 기간(첫 구매일, 마지막 활동일)을 정한다.
 def activity_period(
     rng: np.random.Generator, customer_type: str
 ) -> tuple[pd.Timestamp, pd.Timestamp]:
@@ -355,7 +363,7 @@ def activity_period(
     return first_order_date, last_active_date
 
 
-# 주문 수량을 정한다. 대부분 1~2개이고 드물게 10~30개 대량 주문이 나온다.
+# [수치형] 주문 수량을 정한다. 대부분 1~2개이고 드물게 10~30개 대량 주문이 나온다.
 def pick_quantity(rng: np.random.Generator, category_name: str) -> int:
     # 수량은 대부분 1~2개
     quantity = 1 + rng.poisson(0.35)
@@ -461,17 +469,17 @@ def make_orders(rng: np.random.Generator, products: pd.DataFrame) -> pd.DataFram
             order_rows.append(
                 # 주문 한 건을 목록에 추가한다
                 {
-                    # 고객 번호
+                    # [식별자] 고객 번호
                     "customer_id": customer_id,
-                    # 주문일(문자열)
+                    # [날짜형] 주문일(문자열)
                     "order_date": pd.Timestamp(order_date).strftime("%Y-%m-%d"),
-                    # 상품 번호
+                    # [식별자] 상품 번호
                     "product_id": products.loc[product_row, "product_id"],
-                    # 수량
+                    # [수치형] 수량 (정수, 대량 주문 이상치 포함)
                     "quantity": quantity,
-                    # 지역
+                    # [범주형] 지역 (7곳 중 하나)
                     "region": region,
-                    # 결제 수단
+                    # [범주형] 결제 수단 (4가지 중 하나)
                     "payment_method": rng.choice(PAYMENTS, p=PAYMENT_PROBS),
                 }
             )
@@ -483,7 +491,7 @@ def make_orders(rng: np.random.Generator, products: pd.DataFrame) -> pd.DataFram
         .reset_index(drop=True)
     )
 
-    # 맨 앞에 주문 번호(100001부터)를 넣는다
+    # [식별자] 맨 앞에 주문 번호(100001부터)를 넣는다
     orders.insert(0, "order_id", np.arange(100001, 100001 + len(orders)))
 
     # 주문 표를 돌려준다
