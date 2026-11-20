@@ -1,6 +1,6 @@
 """이커머스 데이터 분석 파이프라인.
 
-원본 CSV를 불러와 전처리(결측치, 이상치), 피처 엔지니어링(이미지, 텍스트),
+H&M 거래 샘플을 불러와 전처리(결측치, 이상치), 피처 엔지니어링(이미지, 텍스트),
 요약 통계, RFM 고객 세분화까지 수행하는 DataAnalyzer 클래스를 제공한다.
 
 실행: python -m src.pipeline
@@ -15,8 +15,13 @@ import numpy as np
 # 표(DataFrame) 처리 라이브러리
 import pandas as pd
 
-# 공통 상수: 이미지 모양, 데이터 파일 경로, 세그먼트 표시 순서
-from src.constants import IMAGE_SHAPE, ORDERS_PATH, PRODUCTS_PATH, SEGMENT_ORDER
+# 공통 상수: 데이터 파일 경로, 세그먼트 표시 순서
+from src.constants import (
+    ARTICLES_PATH,
+    IMAGES_PATH,
+    SEGMENT_ORDER,
+    TRANSACTIONS_PATH,
+)
 
 # IQR 정상 범위를 정하는 기본 배수
 IQR_THRESHOLD = 1.5
@@ -33,52 +38,109 @@ RFM_SCORE_LEVELS = 5
 # 이미지 밝기를 나누는 기본 구간 수
 BRIGHTNESS_BINS = 4
 
+# H&M 원본 컬럼 이름을 읽기 쉬운 이름으로 바꾸는 규칙 (원본 이름: 새 이름)
+COLUMN_NAMES = {"t_dat": "order_date", "prod_name": "product_name"}
+
 
 class DataAnalyzer:
-    """이커머스 거래/상품 데이터를 분석하는 클래스."""
+    """이커머스 거래/상품/이미지 데이터를 분석하는 클래스."""
 
     # 객체를 만들 때 한 번 실행된다
-    # 분석할 거래/상품 CSV 경로를 저장한다.
-    def __init__(self, data_path: str, product_path: str | None = None) -> None:
-        # 거래(주문) 데이터 경로
+    # 분석할 거래/상품 CSV와 이미지 npz 경로를 저장한다.
+    def __init__(
+        self,
+        data_path: str,
+        product_path: str | None = None,
+        image_path: str | None = None,
+    ) -> None:
+        # 거래(구매) 데이터 경로
         self.data_path = data_path
 
         # 상품 데이터 경로 (없으면 거래 데이터만 사용)
         self.product_path = product_path
 
+        # 이미지 배열(npz) 경로 (없으면 이미지 피처를 만들 수 없다)
+        self.image_path = image_path
+
         # 분석 대상 표. load_data()를 하기 전에는 빈 표이다
         self.df: pd.DataFrame = pd.DataFrame()
+
+        # load_images()로 읽은 상품 번호. 읽기 전에는 None이다
+        self.image_article_ids: np.ndarray | None = None
+
+        # load_images()로 읽은 이미지 배열 (상품 수, 세로, 가로, 색)
+        # 읽기 전에는 None이다
+        self.images: np.ndarray | None = None
 
         # calculate_rfm() 결과. 계산 전에는 None이다
         self.rfm: pd.DataFrame | None = None
 
     # 1. 데이터 로드
     #
-    # - CSV를 읽어 주문 데이터를 self.df에 담는다.
-    # - 만약, 상품 데이터가 있으면 merge_key로 합친다.
+    # - CSV를 읽어 거래 데이터를 self.df에 담는다.
+    # - 상품 번호와 고객 번호는 앞자리 0이 사라지지 않게 문자열로 읽는다.
+    # - column_names 규칙대로 컬럼 이름을 바꾼다. 없으면 H&M 기본 규칙을 쓴다.
+    # - 수량(quantity) 컬럼이 없으면 한 행이 상품 1개이므로 1로 채운다.
+    # - 상품 데이터가 있으면 merge_key로 합친다.
     def load_data(
-        self, date_cols: list[str] | None = None, merge_key: str = "product_id"
+        self,
+        date_cols: list[str] | None = None,
+        merge_key: str = "article_id",
+        column_names: dict[str, str] | None = None,
     ) -> pd.DataFrame:
-        # 주문 CSV를 표로 읽는다
-        df = pd.read_csv(self.data_path)
+        # 이름 바꾸기 규칙을 안 정했으면 기본 규칙을 쓴다
+        rename_rules = COLUMN_NAMES if column_names is None else column_names
+
+        # 번호 컬럼은 앞자리 0을 살리려고 문자열로 읽는다
+        string_columns = {merge_key: "string", "customer_id": "string"}
+
+        # 거래 CSV를 표로 읽고 컬럼 이름을 바꾼다
+        df = pd.read_csv(self.data_path, dtype=string_columns).rename(
+            columns=rename_rules
+        )
 
         # 상품 파일 경로가 있으면
         if self.product_path:
-            # 상품 CSV도 읽는다
-            products = pd.read_csv(self.product_path)
+            # 상품 CSV도 읽고 컬럼 이름을 바꾼다
+            products = pd.read_csv(
+                self.product_path, dtype={merge_key: "string"}
+            ).rename(columns=rename_rules)
 
             # 상품 번호가 같은 행끼리 옆으로 붙인다
             df = df.merge(products, on=merge_key, how="left")
 
+        # 수량 컬럼이 없으면
+        if "quantity" not in df.columns:
+            # 한 행이 상품 1개이므로 모두 1로 채운다
+            df["quantity"] = 1
+
         # 데이터 전처리 (데이터 타입 변환 : 문자열 -> 날짜형)
-        for col in date_cols or []:
+        for date_col in date_cols or []:
             # 문자열을 날짜형으로 바꾼다
-            df[col] = pd.to_datetime(df[col])
+            df[date_col] = pd.to_datetime(df[date_col])
 
         # 완성한 표를 객체에 저장한다
         self.df = df
 
         # 저장한 표를 돌려준다
+        return self.df
+
+    # 같은 고객이 같은 날 산 행을 하나의 주문으로 묶는 키를 만든다
+    # 주문 번호가 없는 데이터에서 Frequency(주문 횟수)를 세기 위해 쓴다.
+    # 주문 키 = 고객 번호 + "_" + 거래일(YYYY-MM-DD)
+    def add_order_key(
+        self,
+        customer_col: str = "customer_id",
+        date_col: str = "order_date",
+        output_col: str = "order_key",
+    ) -> pd.DataFrame:
+        # 거래일을 "2020-01-01" 모양의 글자로 바꾼다
+        date_texts = pd.to_datetime(self.df[date_col]).dt.strftime("%Y-%m-%d")
+
+        # 고객 번호와 거래일 글자를 이어 붙여 주문 키를 만든다
+        self.df[output_col] = self.df[customer_col].astype(str) + "_" + date_texts
+
+        # 컬럼을 추가한 표를 돌려준다
         return self.df
 
     # 2. 결측치 처리
@@ -259,54 +321,85 @@ class DataAnalyzer:
 
     # 4. 피처 엔지니어링
 
-    # 픽셀 문자열을 이미지 배열로 바꾼다
-    # 공백으로 구분된 픽셀 문자열 컬럼을 (N, H, W, C) 배열로 바꾼다.
+    # 이미지 배열 파일(npz)을 읽는다
+    # 상품 번호 배열(article_ids)과 이미지 배열(images)을 읽어 객체에 저장한다.
     #
-    # 모든 행의 문자열을 하나로 이어 np.fromstring으로 한 번에 읽고 reshape한다.
-    # downsample_step > 1이면 images[:, ::step, ::step]으로 다운샘플링한다.
-    def parse_images(
-        self,
-        image_col: str = "image_pixels",
-        image_shape: tuple[int, int, int] = IMAGE_SHAPE,
-        downsample_step: int = 1,
-    ) -> np.ndarray:
-        # 모든 행의 문자열을 공백으로 이어 붙인다
-        joined_pixels = " ".join(self.df[image_col].astype(str))
+    # images 모양은 (상품 수, 세로, 가로, 색)이고, 상품 번호와 같은 순서다.
+    def load_images(
+        self, image_path: str | None = None
+    ) -> tuple[np.ndarray, np.ndarray]:
+        # 경로를 안 주면 객체를 만들 때 정한 경로를 쓴다
+        path = image_path or self.image_path
 
-        # 문자열을 1차원 숫자 배열로 한 번에 읽는다
-        flat_pixels = np.fromstring(joined_pixels, dtype=np.int64, sep=" ")
+        # 경로가 어디에도 없으면
+        if path is None:
+            # 에러로 알려준다
+            raise ValueError("이미지 파일 경로가 필요하다")
 
-        # (이미지 수, 세로, 가로, 색) 모양으로 바꾼다
-        images = flat_pixels.reshape((len(self.df),) + tuple(image_shape)).astype(
-            np.uint8
-        )
+        # npz 파일을 열어 두 배열을 메모리로 꺼낸다
+        with np.load(path) as image_file:
+            # 상품 번호 배열
+            article_ids = image_file["article_ids"]
 
-        # downsample_step칸마다 1칸씩 뽑아 이미지를 줄여 돌려준다
-        return images[:, ::downsample_step, ::downsample_step]
+            # 이미지 배열
+            images = image_file["images"]
+
+        # 읽은 값을 객체에 저장한다
+        self.image_article_ids = article_ids
+        self.images = images
+
+        # 읽은 값을 돌려준다
+        return article_ids, images
+
+    # 이미지가 읽혔는지 확인하고 (상품 번호, 이미지)를 돌려준다
+    def _require_images(self) -> tuple[np.ndarray, np.ndarray]:
+        # 아직 안 읽었으면
+        if self.images is None or self.image_article_ids is None:
+            # 에러로 알려준다
+            raise ValueError("load_images()를 먼저 실행해야 한다")
+
+        # 읽어 둔 값을 돌려준다
+        return self.image_article_ids, self.images
+
+    # 상품별 피처를 거래 표의 각 행에 붙인다
+    # 상품 번호가 같은 행에는 같은 값이 붙고, 이미지가 없는 상품은 NaN이 된다.
+    def _attach_article_features(self, feature_table: pd.DataFrame) -> None:
+        # 거래 표의 상품 번호를 글자로 맞춘다
+        article_ids = self.df["article_id"].astype(str)
+
+        # 피처 컬럼을 하나씩
+        for column in feature_table.columns:
+            # 상품 번호로 찾아 거래 표에 붙인다
+            self.df[column] = article_ids.map(feature_table[column])
 
     # 이미지 평균과 표준편차 컬럼을 만든다
     # 이미지별 밝기 평균과 표준편차 컬럼을 추가한다.
     #
     # 컬럼 이름은 image_brightness_mean, image_brightness_std이다.
-    def add_image_features(
-        self,
-        image_col: str = "image_pixels",
-        image_shape: tuple[int, int, int] = IMAGE_SHAPE,
-        downsample_step: int = 1,
-    ) -> pd.DataFrame:
+    # 이미지 전체를 한 번에 계산하므로 반복문을 쓰지 않는다.
+    def add_image_features(self) -> pd.DataFrame:
+        # 읽어 둔 상품 번호와 이미지를 가져온다
+        article_ids, images = self._require_images()
+
         # 이미지를 소수 배열로 바꾼다
-        images = self.parse_images(image_col, image_shape, downsample_step).astype(
-            np.float64
-        )
+        float_images = images.astype(np.float64)
 
         # 이미지 번호(0번 축)를 뺀 나머지 축 전체
-        pixel_axes = tuple(range(1, images.ndim))
+        pixel_axes = tuple(range(1, float_images.ndim))
 
-        # 이미지마다 평균 밝기를 구한다
-        self.df["image_brightness_mean"] = images.mean(axis=pixel_axes)
+        feature_table = pd.DataFrame(
+            # 상품 번호를 행 이름으로 하는 피처 표
+            {
+                # 이미지마다 평균 밝기
+                "image_brightness_mean": float_images.mean(axis=pixel_axes),
+                # 이미지마다 밝기가 퍼진 정도
+                "image_brightness_std": float_images.std(axis=pixel_axes),
+            },
+            index=article_ids,
+        )
 
-        # 이미지마다 밝기가 퍼진 정도를 구한다
-        self.df["image_brightness_std"] = images.std(axis=pixel_axes)
+        # 거래 표에 붙인다
+        self._attach_article_features(feature_table)
 
         # 컬럼을 추가한 표를 돌려준다
         return self.df
@@ -316,19 +409,18 @@ class DataAnalyzer:
     #
     # 엣지 강도는 image_edge_strength 컬럼이다.
     def add_image_advanced_features(
-        self,
-        image_col: str = "image_pixels",
-        image_shape: tuple[int, int, int] = IMAGE_SHAPE,
-        n_brightness_bins: int = BRIGHTNESS_BINS,
-        downsample_step: int = 1,
+        self, n_brightness_bins: int = BRIGHTNESS_BINS
     ) -> pd.DataFrame:
+        # 읽어 둔 상품 번호와 이미지를 가져온다
+        article_ids, images = self._require_images()
+
         # 이미지를 소수 배열로 바꾼다
-        images = self.parse_images(image_col, image_shape, downsample_step).astype(
-            np.float64
-        )
+        float_images = images.astype(np.float64)
 
         # (N, H, W) 흑백 이미지
-        gray_images = images.mean(axis=3) if images.ndim == 4 else images
+        gray_images = (
+            float_images.mean(axis=3) if float_images.ndim == 4 else float_images
+        )
 
         # 밝기 구간 번호를 구한 뒤, 구간마다 픽셀 비율을 센다
         # 픽셀마다 밝기 구간 번호(0 ~ n_brightness_bins-1)를 정한다
@@ -343,10 +435,13 @@ class DataAnalyzer:
             bin_numbers[..., np.newaxis] == np.arange(n_brightness_bins)
         ).mean(axis=(1, 2))
 
+        # 구간별 비율 컬럼을 담을 딕셔너리
+        feature_columns: dict[str, np.ndarray] = {}
+
         # 구간을 하나씩 돌며
         for bin_number in range(n_brightness_bins):
             # 구간별 비율을 컬럼으로 넣는다
-            self.df[f"image_brightness_bin_{bin_number}_ratio"] = bin_ratios[
+            feature_columns[f"image_brightness_bin_{bin_number}_ratio"] = bin_ratios[
                 :, bin_number
             ]
 
@@ -358,7 +453,13 @@ class DataAnalyzer:
         vertical_diff = np.abs(np.diff(gray_images, axis=1)).mean(axis=(1, 2))
 
         # 가로, 세로 평균을 엣지 강도로 쓴다
-        self.df["image_edge_strength"] = (horizontal_diff + vertical_diff) / 2
+        feature_columns["image_edge_strength"] = (horizontal_diff + vertical_diff) / 2
+
+        # 상품 번호를 행 이름으로 하는 피처 표를 만든다
+        feature_table = pd.DataFrame(feature_columns, index=article_ids)
+
+        # 거래 표에 붙인다
+        self._attach_article_features(feature_table)
 
         # 컬럼을 추가한 표를 돌려준다
         return self.df
@@ -656,75 +757,80 @@ def main() -> None:
     # 컬럼을 줄이지 않고 모두 보여준다
     pd.set_option("display.max_columns", None)
 
-    # 소수는 천 단위 쉼표와 소수 2자리로 보여준다
-    pd.set_option("display.float_format", "{:,.2f}".format)
+    # 소수는 천 단위 쉼표와 소수 4자리로 보여준다
+    pd.set_option("display.float_format", "{:,.4f}".format)
 
     # 분석기를 만든다
-    analyzer = DataAnalyzer(ORDERS_PATH, product_path=PRODUCTS_PATH)
+    analyzer = DataAnalyzer(
+        TRANSACTIONS_PATH, product_path=ARTICLES_PATH, image_path=IMAGES_PATH
+    )
 
-    # 데이터를 읽고 날짜 컬럼을 날짜형으로 바꾼다
-    df = analyzer.load_data(date_cols=["order_date", "registered_date"])
+    # 거래와 상품을 합쳐 읽고 거래일을 날짜형으로 바꾼다
+    df = analyzer.load_data(date_cols=["order_date"])
 
     # 표의 크기를 출력한다
     print(f"[1] 데이터 로드: {df.shape[0]:,}행 x {df.shape[1]}열")
 
-    # 긴 이미지 컬럼을 빼고 앞 3행을 보여준다
-    print(df.drop(columns="image_pixels").head(3), "\n")
-
-    # 결측치 단계 제목
-    print("[2] 결측치 현황")
-
-    # 컬럼별 빈 값 현황을 출력한다
-    print(analyzer.missing_report(), "\n")
-
-    # 카테고리별 중앙값으로 채운다
-    analyzer.handle_missing_values(
-        strategy="group_median", group_col="category", columns=["price", "rating"]
+    # 고객 수와 기간을 출력한다
+    print(
+        f"    고객 {df['customer_id'].nunique():,}명, "
+        f"기간 {df['order_date'].min().date()} ~ {df['order_date'].max().date()}\n"
     )
 
-    # 남은 빈 값 수를 센다
-    remaining_missing = int(analyzer.df[["price", "rating"]].isna().sum().sum())
-
-    # 남은 빈 값 수를 출력한다
-    print(f"    category별 중앙값으로 대치 후 남은 결측치: {remaining_missing}개\n")
-
-    # 주문 금액 컬럼을 만든다
+    # 구매 금액 컬럼을 만든다
     analyzer.add_amount("price", "quantity")
 
+    # 이미지 배열을 읽는다
+    _, images = analyzer.load_images()
+
+    # 이미지 배열의 모양을 출력한다
+    print(f"[2] 이미지 로드: 배열 모양 {images.shape}, 자료형 {images.dtype}")
+
     # 이미지 평균, 표준편차 컬럼을 만든다
-    analyzer.add_image_features("image_pixels", image_shape=IMAGE_SHAPE)
+    analyzer.add_image_features()
 
     # 밝기 비율, 엣지 컬럼을 만든다
-    analyzer.add_image_advanced_features(
-        "image_pixels", image_shape=IMAGE_SHAPE, n_brightness_bins=BRIGHTNESS_BINS
-    )
+    analyzer.add_image_advanced_features(n_brightness_bins=BRIGHTNESS_BINS)
 
     # 상품명 단어 수, 글자 수 컬럼을 만든다
     analyzer.add_text_features("product_name")
 
-    # 단계 제목
+    # 피처 엔지니어링 결과를 알려준다
     print(
-        "[3] 피처 엔지니어링: image_brightness_mean, image_brightness_std, "
+        "    피처 추가: image_brightness_mean, image_brightness_std, "
         "image_brightness_bin_0~3_ratio, image_edge_strength, "
-        "name_word_count, name_length 추가"
+        "name_word_count, name_length\n"
     )
 
-    # 새 컬럼 앞 3행을 보여준다
+    # 결측치 단계 제목
+    print("[3] 결측치 현황")
+
+    # 컬럼별 빈 값 현황을 출력한다
+    print(analyzer.missing_report(), "\n")
+
+    # 이미지 피처 컬럼 이름 목록
+    image_feature_columns = [
+        "image_brightness_mean",
+        "image_brightness_std",
+        "image_edge_strength",
+    ]
+
+    # 상품 종류별 중앙값으로 이미지 피처의 빈 값을 채운다
+    analyzer.handle_missing_values(
+        strategy="group_median",
+        group_col="product_type_name",
+        columns=image_feature_columns,
+    )
+
+    # 남은 빈 값 수를 센다
+    remaining_missing = int(analyzer.df[image_feature_columns].isna().sum().sum())
+
+    # 남은 빈 값 수를 출력한다
     print(
-        analyzer.df[
-            [
-                "product_name",
-                "image_brightness_mean",
-                "image_brightness_std",
-                "image_edge_strength",
-                "name_word_count",
-                "name_length",
-            ]
-        ].head(3),
-        "\n",
+        f"    product_type_name별 중앙값 대치 후 남은 결측치: {remaining_missing}개\n"
     )
 
-    # 주문 금액의 정상 범위를 구한다
+    # 구매 금액의 정상 범위를 구한다
     lower_bound, upper_bound = analyzer.get_iqr_bounds(
         "amount", threshold=IQR_THRESHOLD
     )
@@ -734,8 +840,8 @@ def main() -> None:
 
     # 범위와 이상치 수를 출력한다
     print(
-        f"[4] amount IQR 정상 범위: {lower_bound:,.0f} ~ {upper_bound:,.0f}, "
-        f"이상치 {len(outliers)}건 ({len(outliers) / len(df) * 100:.1f}%)"
+        f"[4] amount IQR 정상 범위: {lower_bound:.4f} ~ {upper_bound:.4f}, "
+        f"이상치 {len(outliers):,}건 ({len(outliers) / len(df) * 100:.1f}%)"
     )
 
     # 이상치를 지우지 않는 이유를 알려준다
@@ -750,13 +856,11 @@ def main() -> None:
     # 통계 단계 제목
     print("[5] 요약 통계")
 
+    # 통계를 낼 컬럼 목록
+    statistic_columns = ["price", "amount_clipped"] + image_feature_columns
+
     # 요약 통계표를 출력한다
-    print(
-        analyzer.summary_statistics(
-            ["price", "quantity", "amount", "rating", "image_brightness_mean"]
-        ),
-        "\n",
-    )
+    print(analyzer.summary_statistics(statistic_columns), "\n")
 
     # 상관계수 제목
     print("    상관계수")
@@ -764,20 +868,16 @@ def main() -> None:
     # 상관계수 표를 출력한다
     print(
         analyzer.correlation(
-            [
-                "price",
-                "quantity",
-                "amount",
-                "rating",
-                "image_brightness_mean",
-                "image_brightness_std",
-            ]
+            ["price", "image_brightness_mean", "image_brightness_std", "name_length"]
         ),
         "\n",
     )
 
+    # 같은 고객이 같은 날 산 행을 하나의 주문으로 묶는 키를 만든다
+    analyzer.add_order_key()
+
     # 고객별 R, F, M 점수를 계산한다
-    analyzer.calculate_rfm("customer_id", "order_date", "amount", order_col="order_id")
+    analyzer.calculate_rfm("customer_id", "order_date", "amount", order_col="order_key")
 
     # 점수로 세그먼트를 나눈다
     analyzer.segment_customers()

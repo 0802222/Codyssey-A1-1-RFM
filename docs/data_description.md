@@ -1,92 +1,95 @@
 # 분석 데이터 설명
 
-[README 3.1 Data](../README.md#31-data)의 상세 내용이다. 컬럼 설명과 합성 데이터를 만든 규칙을 정리했다.
+[README 3.1 Data](../README.md#31-data)의 상세 내용이다. 데이터 출처와 사용 조건, 샘플을 만든 방법, 컬럼 설명을 정리했다.
 
 <br>
 <br>
 
-# 1. 데이터 항목(컬럼) 설명
+# 1. 데이터 출처와 사용 조건
 
-주문 파일과 상품 파일을 합친 표의 항목 13개를 유형별로 묶은 설명표:
+- 출처는 Kaggle 대회 [H&M Personalized Fashion Recommendations](https://www.kaggle.com/competitions/h-and-m-personalized-fashion-recommendations)이다. H&M의 실제 거래 기록, 상품 정보, 상품 이미지로 이루어져 있다.
+- 대회 규칙에 따라 이 과제는 아래처럼 데이터를 다룬다.
+    - 7.A: 대회, 포럼, 비상업적인 학술·교육 목적으로만 사용할 수 있다. 이 과제는 교육 과정의 학습용이다.
+    - 7.B: 데이터를 복사, 게시, 제3자에게 재배포할 수 없다. 그래서 원본과 샘플 파일을 저장소에 올리지 않고(`.gitignore`), 샘플을 만드는 코드(`data/make_sample.py`)만 올렸다.
+- 원본의 규모는 아래와 같다.
+
+원본 파일 3종의 규모
+
+| 파일 | 내용 | 규모 |
+|---|---|---|
+| `transactions_train.csv` | 거래 (날짜, 고객, 상품, 가격, 판매 채널) | 31,788,324행, 고객 1,362,281명, 2018-09-20 ~ 2020-09-22 |
+| `articles.csv` | 상품 정보 25개 컬럼 | 105,542개 |
+| `images/앞3자리/상품번호.jpg` | 상품 이미지 | 105,100장 (상품보다 442개 적다) |
+
+<br>
+<br>
+
+# 2. 샘플을 만든 방법
+
+원본(약 34GB)은 개인 노트북에서 다루기 어려워 고객 일부만 뽑아 쓴다. [data/make_sample.py](../data/make_sample.py)가 아래 순서로 샘플 3개 파일을 `data/`에 만든다.
+
+샘플 만들기 순서와 사용한 함수
+
+| 순서 | 하는 일 | 함수 | 결과 |
+|---|---|---|---|
+| 1 | 원본 거래를 100만 행씩 조각으로 읽어 전체 고객 번호를 모으고, 정렬한 뒤 시드 42로 1,000명을 무작위로 고른다 | `pick_customer_ids()` | 고객 1,000명 |
+| 2 | 원본 거래를 다시 조각으로 읽으며 고른 고객의 행을 모두 모은다 | `extract_transactions()` | 거래 23,422행 (`transactions_sample.csv`, 2.5MB) |
+| 3 | 거래에 나온 상품의 정보만 남긴다. 상품 번호는 이미지 파일 이름에 맞게 앞을 0으로 채워 10자리로 만든다 | `load_articles()` | 상품 13,752개 (`articles_sample.csv`, 4.6MB) |
+| 4 | 이미지를 읽어 32x32로 줄이고 하나의 배열로 쌓는다. 파일이 없는 상품은 건너뛴다 | `build_image_arrays()`, `resize_image()` | 이미지 13,717장 (`images_sample.npz`, 18.2MB) |
+
+- 고객 단위로 뽑는 이유: `Recency`, `Frequency`, `Monetary`는 한 고객의 전체 구매 이력으로 계산한다. 거래 행을 무작위로 뽑으면 이력이 끊겨 `RFM`이 틀어진다.
+- 고객 수를 1,000명으로 정한 이유: `RFM` 점수는 고객을 5등분해서 매기므로, 1,000명이면 한 구간이 200명이라 결과를 손으로 검산하기 쉽다.
+- 시드 42는 난수의 출발값이다. 값 자체에 기술적 의미는 없고 개발자들이 관습적으로 쓰는 숫자다. 중요한 것은 고정했다는 점이다. 고정해야 누가 실행해도 같은 고객 1,000명이 뽑힌다.
+- 이미지를 줄이는 방법: 세로와 가로를 같은 간격으로 32칸씩 뽑는다(`np.linspace`로 줄 번호를 만들고 `np.ix_`로 고른다). 흑백이면 같은 값을 3번 쌓아 컬러 모양으로 맞추고, 투명도 채널은 버린다.
+- 이미지가 없는 상품 35개(13,752 - 13,717)는 원본에 파일이 없다. 이 상품을 산 거래 86행은 이미지 피처가 비고, [결측치 처리](../README.md#332-결측치-상품-종류별-중앙값으로-대치)에서 채운다.
+- `npz`는 NumPy 배열 여러 개를 한 파일에 압축해 담는 형식이다. 상품 번호 배열(`article_ids`)과 이미지 배열(`images`, 모양 `(13717, 32, 32, 3)`, `uint8`)이 들어 있다. `np.load()`로 읽는다.
+
+<br>
+<br>
+
+# 3. 원본에 없는 값을 만든 방법
+
+- 주문 번호: 원본에 주문 번호가 없다. `add_order_key()`가 "고객 번호_거래일"을 이어 붙여 `order_key`를 만든다. 같은 고객이 같은 날 산 행은 주문 1건이다. 23,422행이 7,075건이 된다.
+- 수량: 원본에 수량이 없다. 행 하나가 상품 1개의 구매라서 `quantity`를 모두 1로 채운다.
+- 구매 금액: `amount = price x quantity`로 만든다. 수량이 모두 1이라 값은 `price`와 같다.
+- 가격 단위: 원본 `price`는 이미 0~1 범위로 정규화되어 있어 통화 단위가 없다. 이 과제의 금액은 모두 고객과 상품을 비교하기 위한 상대값이다.
+- `Recency` 기준일은 데이터의 마지막 거래일인 2020-09-22다.
+
+<br>
+<br>
+
+# 4. 데이터 항목(컬럼) 설명
+
+거래 5개 + 상품 25개 - 합치는 키 1개 + 파생 2개 = 31개 컬럼을 유형별로 묶은 설명표:
 
 <table>
 <thead>
 <tr><th>유형</th><th>컬럼</th><th>출처 파일</th><th>설명</th></tr>
 </thead>
 <tbody>
-<tr><td rowspan="3">식별자</td><td><code>order_id</code></td><td>주문</td><td>주문 번호</td></tr>
-<tr><td><code>customer_id</code></td><td>주문</td><td>고객 번호 (<code>RFM</code> 기준)</td></tr>
-<tr><td><code>product_id</code></td><td>주문, 상품</td><td>상품 번호 (두 파일을 합치는 키)</td></tr>
-<tr><td rowspan="2">날짜형</td><td><code>order_date</code></td><td>주문</td><td>주문일 (<code>Recency</code> 기준)</td></tr>
-<tr><td><code>registered_date</code></td><td>상품</td><td>상품 등록일</td></tr>
-<tr><td rowspan="3">수치형</td><td><code>quantity</code></td><td>주문</td><td>주문 수량</td></tr>
-<tr><td><code>price</code></td><td>상품</td><td>상품 가격(원). 결측치 4.8% (합친 표 5,167행 기준)</td></tr>
-<tr><td><code>rating</code></td><td>상품</td><td>상품 평점(1~5). 결측치 10.8% (합친 표 5,167행 기준)</td></tr>
-<tr><td rowspan="3">범주형</td><td><code>region</code></td><td>주문</td><td>고객 지역 (7개)</td></tr>
-<tr><td><code>payment_method</code></td><td>주문</td><td>결제 수단 (4개)</td></tr>
-<tr><td><code>category</code></td><td>상품</td><td>상품 카테고리 (6개)</td></tr>
-<tr><td>텍스트</td><td><code>product_name</code></td><td>상품</td><td>상품명</td></tr>
-<tr><td>이미지 배열</td><td><code>image_pixels</code></td><td>상품</td><td>16x16x3 = 768개 픽셀 값을 공백으로 이은 문자열</td></tr>
+<tr><td rowspan="2">식별자</td><td><code>customer_id</code></td><td>거래</td><td>고객 번호. 원본에서 이미 암호화된 값이다 (1,000명)</td></tr>
+<tr><td><code>article_id</code></td><td>거래, 상품</td><td>상품 번호 (13,752개, 두 파일을 합치는 키)</td></tr>
+<tr><td>날짜형</td><td><code>order_date</code></td><td>거래</td><td>거래일 (원본 이름 <code>t_dat</code>, <code>Recency</code> 기준). 734개 날짜</td></tr>
+<tr><td rowspan="3">수치형</td><td><code>price</code></td><td>거래</td><td>정규화된 가격 (0.0005 ~ 0.3373)</td></tr>
+<tr><td><code>quantity</code></td><td>파생</td><td>수량. 모두 1</td></tr>
+<tr><td><code>amount</code></td><td>파생</td><td>구매 금액 (<code>price x quantity</code>)</td></tr>
+<tr><td rowspan="12">범주형</td><td><code>sales_channel_id</code></td><td>거래</td><td>판매 채널 (2종: 1, 2)</td></tr>
+<tr><td><code>product_code</code></td><td>상품</td><td>상품 코드 (8,360종, 같은 상품의 색 변형이 `article_id`로 나뉜다)</td></tr>
+<tr><td><code>product_type_no</code>, <code>product_type_name</code></td><td>상품</td><td>상품 종류 번호와 이름 (96종). 결측치 대치의 그룹 기준</td></tr>
+<tr><td><code>product_group_name</code></td><td>상품</td><td>상품군 (12종, 예: <code>Garment Upper body</code>)</td></tr>
+<tr><td><code>graphical_appearance_no</code>, <code>graphical_appearance_name</code></td><td>상품</td><td>무늬 종류 번호와 이름 (29종)</td></tr>
+<tr><td><code>colour_group_code</code>, <code>colour_group_name</code></td><td>상품</td><td>색 번호와 이름 (50종)</td></tr>
+<tr><td><code>perceived_colour_value_id</code>, <code>perceived_colour_value_name</code></td><td>상품</td><td>색의 밝기·진하기 구분 번호와 이름 (8종)</td></tr>
+<tr><td><code>perceived_colour_master_id</code>, <code>perceived_colour_master_name</code></td><td>상품</td><td>대표색 번호와 이름 (18종)</td></tr>
+<tr><td><code>department_no</code>, <code>department_name</code></td><td>상품</td><td>부서 번호(264종)와 이름(218종)</td></tr>
+<tr><td><code>index_code</code>, <code>index_name</code></td><td>상품</td><td>매장 구분 코드와 이름 (10종)</td></tr>
+<tr><td><code>index_group_no</code>, <code>index_group_name</code></td><td>상품</td><td>매장 대분류 번호와 이름 (5종, 예: <code>Ladieswear</code>)</td></tr>
+<tr><td><code>section_no</code>, <code>section_name</code>, <code>garment_group_no</code>, <code>garment_group_name</code></td><td>상품</td><td>섹션(54종)과 의류 그룹(21종)의 번호와 이름</td></tr>
+<tr><td rowspan="2">텍스트</td><td><code>product_name</code></td><td>상품</td><td>상품명. 단어 수, 글자 수 피처의 재료 (8,466종)</td></tr>
+<tr><td><code>detail_desc</code></td><td>상품</td><td>상품 상세 설명. 72행(0.31%) 비어 있다</td></tr>
+<tr><td>이미지 배열</td><td><code>images_sample.npz</code></td><td>별도 파일</td><td>상품 13,717장의 32x32x3 <code>uint8</code> 배열과 상품 번호. 표 컬럼은 아니고 <code>load_images()</code>로 읽는다</td></tr>
 </tbody>
 </table>
 
-- 주문 금액 `amount`는 파이프라인에서 `price x quantity`로 만든다.
-- `Recency` 기준일은 데이터의 마지막 거래일인 2025-12-31이다.
-
-<br>
-<br>
-
-# 2. 합성 데이터를 만든 규칙
-
-- 고객은 5가지 행동 유형(VIP형, 충성형, 일반형, 신규형, 이탈형)으로 만들고, 유형마다 활동 기간과 주문 횟수를 다르게 줬다.
-- 11\~12월에는 주문 확률을 1.8배로 높였다.
-- 전체 주문의 약 2%(`Food`, `Books`는 추가 3%)를 10\~30개 대량 주문으로 만들어 이상치를 넣었다.
-- 이미지는 카테고리별 기본색 + 그라데이션 + 노이즈로 만들고, 비싼 상품일수록 어둡게 했다.
-- 분석 결과의 패턴은 이 규칙에서 나온 것이다. 파이프라인이 숨겨진 패턴을 제대로 찾아내는지 확인하는 용도이며, 실제 데이터에 적용할 때는 다시 검증해야 한다.
-- 아래 숫자는 실제 쇼핑몰 통계에서 가져온 값이 아니라, 분석에서 확인하고 싶은 패턴이 드러나도록 직접 정한 설계값이다. 정한 이유를 2.1~2.3에 적었다.
-
-<br>
-
-## 2.1 생성 상수를 정한 이유
-
-[generate_data.py](../data/generate_data.py) 상단의 상수와 값을 정한 근거를 정리한 표:
-
-| 상수 | 값 | 이유 |
-|---|---|---|
-| `SEED` | 42 | 난수의 출발값이다. 값 자체에 기술적 의미는 없고, 개발자들이 관습적으로 쓰는 숫자다. 중요한 것은 고정했다는 점이다. 고정해야 누가 실행해도 같은 데이터가 나온다. |
-| `N_PRODUCTS` | 200 | 카테고리 6개에 개당 약 33개로, 상품명과 가격 분포가 다양해진다. 이미지 컬럼은 상품당 숫자 768개라 더 늘리면 CSV가 불필요하게 커진다. |
-| `N_CUSTOMERS` | 1,000 | `RFM` 점수는 고객을 5등분해서 매긴다. 1,000명이면 한 구간이 정확히 200명이라 계산 결과를 손으로 검산하기 쉽다. |
-| `START_DATE` ~ `END_DATE` | 2024-01-01 ~ 2025-12-31 | 1년이면 11~12월 성수기가 한 번뿐이라 반복되는 계절 패턴인지 알 수 없다. 2년이면 성수기가 두 번 나오고, 코호트 리텐션도 의미 있는 길이가 된다. |
-| 주문 건수 | 5,167건 (고객 유형별 설정에서 나온 결과) | 과제 조건인 1,000건 이상을 채우고, 고객 1,000명이 `Frequency` 차이를 보일 만큼 주문이 있다. |
-| `PRICE_MISSING_RATE` | 5% | 결측치 대치를 실습하려면 빈 값이 있어야 하고, 대치의 부작용(분산 축소)은 결측이 적어야 작다. 그래서 한 자릿수 비율로 정했다. 상품 표 200개 중 약 10개가 기대값이고, 실제로는 11개(5.5%)가 비었다. 주문과 합친 5,167행에서는 상품이 여러 주문에 나와 250행(4.8%)이 된다. |
-| `RATING_MISSING_RATE` | 10% | 평점은 구매자가 남겨야 생기는 값이라 가격보다 비기 쉽다고 가정해 가격보다 높게 정했다. 두 컬럼의 비율이 달라 결측 현황표에서 컬럼별 차이가 보인다. 상품 표 기준 실제로는 22개(11.0%)가 비었고, 합친 5,167행에서는 560행(10.8%)이다. |
-| `BULK_ORDER_RATE` | 2% | 평소 수량은 1~2개(`1 + 포아송(0.35)`)라서, 10~30개 대량 주문을 소수만 섞으면 수량 이상치가 생긴다. 주문 5,167건 기준 약 103건이다. 너무 적으면 탐지 여부를 확인하기 어렵고, 너무 많으면 이상치가 아니라 정상 분포가 된다. |
-| `BULK_ORDER_EXTRA_RATE`<br>`BULK_PRONE_CATEGORIES` | 3%<br>`Food`, `Books` | 식품은 쟁여 사고 도서는 단체로 사는 일이 있다고 가정해 두 카테고리에 대량 주문을 더 넣었다. 이상치 비율이 카테고리마다 다르게 보이게 하려는 것이다. 위 두 상수까지 합치면 실제 수량 10개 이상 주문은 139건(2.7%)이고, `Food` 4.7%, `Books` 4.3%, 나머지는 1.7~2.5%다. |
-
-<br>
-
-## 2.2 고객 5가지 유형의 행동 규칙
-
-`RFM`은 고객마다 구매 패턴이 달라야 의미가 있다. 그래서 고객을 5가지 유형으로 나누고 유형마다 규칙을 줬다. `CUSTOMER_TYPES`에 정의했고, 첫 구매일과 마지막 활동일은 `activity_period()`가 정한다. 규칙표:
-
-| 유형 | 고객 비율 | 평균 주문 횟수 | 활동 기간 | 선호 카테고리 (가중치) | 의도 |
-|---|---|---|---|---|---|
-| VIP형 (`vip`) | 10% | 약 16회 | 첫 1년 안에 시작해 끝나기 30일 전 안까지 활동 | `Electronics` 40% | 자주 사고, 비싼 상품을 사서 `R`, `F`, `M`이 모두 높은 소수 집단 |
-| 충성형 (`loyal`) | 20% | 약 9회 | VIP와 같음 | `Fashion` 25%, 나머지 고르게 | 꾸준히 사지만 VIP만큼 많이 쓰지는 않는 집단 |
-| 일반형 (`regular`) | 30% | 약 4회 | 540일 안에 시작해 끝나기 30~270일 전에 마지막 구매 | `Fashion` 25%, `Beauty`, `Food` 각 20% | 가끔 사고 한동안 안 온 집단 (`At Risk` 후보) |
-| 신규형 (`new`) | 15% | 약 1.5회 | 마지막 60일 안에 첫 구매 | 일반형과 같음 | `Recency`는 좋지만 `Frequency`가 낮은 집단 |
-| 이탈형 (`churned`) | 25% | 약 2회 | 앞쪽 420일 안에 시작해 120일 안에 마지막 구매 | `Electronics` 5%, `Food` 25% | 일찍 떠나서 `Recency`가 나쁜 집단 |
-
-- 평균 주문 횟수는 `1 + 포아송(추가 주문 평균)`의 기댓값이다. 예: VIP는 `1 + 15 = 16`회.
-- 선호 카테고리 가중치는 `Electronics`, `Fashion`, `Beauty`, `Home`, `Food`, `Books` 순서로 합이 1이다. 예: VIP는 `0.40, 0.20, 0.15, 0.10, 0.10, 0.05`.
-- `Electronics`는 가격이 제일 비싼 카테고리(기준 18만 원)다. VIP는 이 비중을 높이고 이탈형은 낮춰서, 금액(`M`)이 단골 쪽에서 더 커지도록 했다. 나머지 카테고리의 차이는 작게 둬서 "유형마다 취향이 완전히 다르다"는 인상은 피했다.
-- 이 설계가 분석에 보이는 위치는 [README 3.4 RFM 고객 세분화](../README.md#34-rfm-고객-세분화)다.
-
-<br>
-
-## 2.3 상품명 조합 재료(`NAME_PARTS`)를 둔 이유
-
-- 과제가 텍스트 데이터를 요구하고, `add_text_features()`가 상품명의 글자 수와 단어 수를 분석한다. 그래서 상품명이 필요하다.
-- 임의의 글자를 이어 붙이면 어색하므로 `꾸미는 말 + 물건 이름 + 에디션`으로 조합한다. 예: `Eco` + `Mug` + ` Mini` = `Eco Mug Mini`.
-- 카테고리마다 어울리는 물건이 달라서 재료 목록을 카테고리별로 나눴다. 전자기기에 `Cushion`이 붙는 어색함을 막기 위해서다.
-- 조합 가짓수는 카테고리당 `5 x 6 x 5 = 150`가지이고 상품은 카테고리당 약 33개라서, 같은 이름이 나올 수는 있지만 드물다.
+- 파이프라인이 추가로 만드는 컬럼은 이미지 7개(`image_brightness_mean`, `image_brightness_std`, `image_brightness_bin_0~3_ratio`, `image_edge_strength`)와 텍스트 2개(`name_word_count`, `name_length`)이다. 이 컬럼을 모두 합치면 표는 40개 컬럼이 된다.
+- 범주형 컬럼에는 같은 뜻의 번호(`*_no`, `*_code`, `*_id`)와 이름(`*_name`)이 짝으로 들어 있다. 분석에서는 읽기 쉬운 이름 컬럼을 쓴다.

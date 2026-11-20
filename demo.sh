@@ -54,22 +54,29 @@ step "2. 단위 테스트"
 # 테스트를 모두 돌리고 마지막 40줄만 보여준다
 "$PY" -m unittest discover -s tests -v 2>&1 | tail -n 40
 
+# 분석에 필요한 샘플 파일 3개가 있는지 확인한다 (대회 규칙상 저장소에 없다)
+for sample_file in data/transactions_sample.csv data/articles_sample.csv data/images_sample.npz; do
+    # 파일이 없으면
+    if [ ! -f "$sample_file" ]; then
+        # 없는 파일과 만드는 방법을 알려주고
+        echo "샘플 파일이 없다: $sample_file"
+        echo "원본을 data/raw에 받은 뒤 '$PY -m data.make_sample --raw-dir data/raw'로 만든다 (docs/run_guide.md 참고)"
+
+        # 실패로 끝낸다
+        exit 1
+    fi
+done
+
 # 3단계 제목 출력
-step "3. 데이터 생성 (고정 시드 42)"
-
-# 합성 데이터 CSV를 만든다
-"$PY" -m data.generate_data
-
-# 4단계 제목 출력
-step "4. 분석 파이프라인 실행 (src/pipeline.py)"
+step "3. 분석 파이프라인 실행 (src/pipeline.py)"
 
 # 전체 분석 흐름을 실행하고 결과를 출력한다
 "$PY" -m src.pipeline
 
 # --no-nb 옵션이 없으면 노트북도 실행한다
 if [ "${1:-}" != "--no-nb" ]; then
-    # 5단계 제목 출력
-    step "5. 분석 노트북 재실행"
+    # 4단계 제목 출력
+    step "4. 분석 노트북 재실행"
 
     # 노트북 실행 도구가 설치돼 있으면
     if "$PY" -c "import nbconvert" 2>/dev/null; then

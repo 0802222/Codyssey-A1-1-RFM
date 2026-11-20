@@ -14,6 +14,12 @@ venv/
 # 실행 결과물 (스크립트로 다시 만들 수 있음)
 outputs/
 
+# Kaggle 원본 데이터와 샘플 (재배포 조건을 확인하기 전까지 Git에 올리지 않는다)
+data/raw/
+data/transactions_sample.csv
+data/articles_sample.csv
+data/images_sample.npz
+
 # OS, 에디터
 .DS_Store
 .vscode/
