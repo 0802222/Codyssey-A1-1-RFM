@@ -38,14 +38,14 @@ zip -r hm-src.zip src data/make_sample.py data/__init__.py -x "*/__pycache__/*"
 ```
 
 ```python
-# 코드를 작업 폴더로 복사하고 샘플을 만드는 첫 셀 (Dataset 이름과 폴더 구조는 화면에서 확인해 맞춘다)
+# 코드를 작업 폴더로 복사하고 샘플을 만드는 첫 셀 (Dataset 경로는 `/kaggle/input` 아래 `datasets/<사용자>/<Dataset 이름>` 형태이다. 본인 계정과 이름으로 바꾼다)
 import os
 import shutil
 
 # 작업 폴더, 코드 Dataset 폴더, 대회 데이터 폴더
 WORK = "/kaggle/working"
-CODE = "/kaggle/input/hm-src"
-RAW = "/kaggle/input/h-and-m-personalized-fashion-recommendations"
+CODE = "/kaggle/input/datasets/chod5ng/hm-src-zip"
+RAW = "/kaggle/input/competitions/h-and-m-personalized-fashion-recommendations"
 
 # 입력 폴더는 읽기 전용이라 src와 data를 작업 폴더로 복사한다
 shutil.copytree(f"{CODE}/src", f"{WORK}/src", dirs_exist_ok=True)
@@ -60,6 +60,7 @@ os.system(f"cd {WORK} && python -m data.make_sample --raw-dir {RAW}")
 ```
 
 - `kaggle` 명령은 `requirements.txt`에 없다. Kaggle 공식 CLI 패키지를 따로 설치해야 하고, API 토큰 파일은 저장소에 넣지 않는다.
+- 위 첫 셀과 노트북 전체 실행(Run All)을 Kaggle에서 확인했다. 샘플 생성 출력이 로컬과 같고 에러 없이 끝났으며, 노트북은 공개로 저장했다.
 - 샘플 생성 결과는 고객 1,000명, 거래 23,422건, 상품 13,752개(이미지 13,717장)이다. 시드가 고정이라 같은 원본이면 항상 같은 결과가 나온다.
 
 <br>
