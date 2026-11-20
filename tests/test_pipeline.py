@@ -56,82 +56,191 @@ class TestLoadData(unittest.TestCase):
         # 임시 폴더를 만든다
         self.temp_dir = tempfile.TemporaryDirectory()
 
-        orders = pd.DataFrame(
-            # 가짜 주문 표
+        transactions = pd.DataFrame(
+            # 가짜 거래 표 (H&M 원본과 같은 컬럼 이름)
             {
-                # 주문 번호
-                "order_id": [1, 2, 3],
+                # 거래일(문자열)
+                "t_dat": ["2020-01-01", "2020-01-05", "2020-01-03"],
                 # 고객 번호
                 "customer_id": ["C1", "C1", "C2"],
-                "order_date": [
-                    "2025-01-01",
-                    "2025-01-05",
-                    "2025-01-03",
-                    # 주문일(문자열)
-                ],
-                # 상품 번호
-                "product_id": ["P1", "P2", "P1"],
-                # 수량
-                "quantity": [1, 2, 3],
+                # 상품 번호 (앞자리 0이 있는 10자리)
+                "article_id": ["0000000001", "0000000002", "0000000001"],
+                # 가격
+                "price": [0.1, 0.2, 0.3],
+                # 판매 채널
+                "sales_channel_id": [1, 2, 1],
             }
         )
-        products = pd.DataFrame(
+        articles = pd.DataFrame(
             # 가짜 상품 표
             {
                 # 상품 번호
-                "product_id": ["P1", "P2"],
-                # 상품명
-                "product_name": ["Red Shirt", "Blue Jeans Slim"],
-                # 카테고리
-                "category": ["Fashion", "Fashion"],
-                # 가격
-                "price": [10.0, 20.0],
+                "article_id": ["0000000001", "0000000002"],
+                # 상품명 (원본 컬럼 이름)
+                "prod_name": ["Red Shirt", "Blue Jeans Slim"],
+                # 상품 종류
+                "product_type_name": ["Shirt", "Trousers"],
             }
         )
-        # 임시 주문 파일 경로
-        self.orders_path = os.path.join(self.temp_dir.name, "orders.csv")
+        # 임시 거래 파일 경로
+        self.transactions_path = os.path.join(self.temp_dir.name, "transactions.csv")
 
         # 임시 상품 파일 경로
-        self.products_path = os.path.join(self.temp_dir.name, "products.csv")
+        self.articles_path = os.path.join(self.temp_dir.name, "articles.csv")
 
-        # 주문 표를 CSV로 저장한다
-        orders.to_csv(self.orders_path, index=False)
+        # 거래 표를 CSV로 저장한다
+        transactions.to_csv(self.transactions_path, index=False)
 
         # 상품 표를 CSV로 저장한다
-        products.to_csv(self.products_path, index=False)
+        articles.to_csv(self.articles_path, index=False)
 
     # 테스트마다 끝나고 실행되는 정리 단계
     def tearDown(self) -> None:
         # 임시 폴더를 지운다
         self.temp_dir.cleanup()
 
-    # 주문 파일 하나만 읽는 경우
+    # 거래 파일 하나만 읽는 경우
     def test_load_single_file(self) -> None:
-        # 주문 파일만 읽는다
-        df = DataAnalyzer(self.orders_path).load_data()
+        # 거래 파일만 읽는다
+        df = DataAnalyzer(self.transactions_path).load_data()
 
         # 3행이어야 한다
         self.assertEqual(len(df), 3)
 
-    # 상품 파일을 합치고 날짜를 바꾸는 경우
-    def test_load_merges_products_and_parses_dates(self) -> None:
-        # 두 파일을 모두 지정한다
-        analyzer = DataAnalyzer(self.orders_path, product_path=self.products_path)
+    # 거래일 컬럼 이름이 order_date로 바뀌는지
+    def test_load_renames_columns(self) -> None:
+        # 거래 파일을 읽는다
+        df = DataAnalyzer(self.transactions_path).load_data()
 
-        # 읽으면서 주문일을 날짜형으로 바꾼다
+        # 거래일 컬럼이 order_date여야 한다
+        self.assertIn("order_date", df.columns)
+
+        # 원래 이름 t_dat은 없어야 한다
+        self.assertNotIn("t_dat", df.columns)
+
+    # 한 행이 상품 1개라서 수량 컬럼이 1로 채워지는지
+    def test_load_adds_quantity_one(self) -> None:
+        # 거래 파일을 읽는다
+        df = DataAnalyzer(self.transactions_path).load_data()
+
+        # 수량은 모두 1이어야 한다
+        self.assertEqual(df["quantity"].tolist(), [1, 1, 1])
+
+    # 상품 번호 앞자리 0이 살아 있는지
+    def test_load_keeps_leading_zeros(self) -> None:
+        # 거래 파일을 읽는다
+        df = DataAnalyzer(self.transactions_path).load_data()
+
+        # 상품 번호는 10자리 문자열 그대로여야 한다
+        self.assertEqual(df["article_id"].iloc[0], "0000000001")
+
+    # 상품 파일을 합치고 날짜를 바꾸는 경우
+    def test_load_merges_articles_and_parses_dates(self) -> None:
+        # 두 파일을 모두 지정한다
+        analyzer = DataAnalyzer(self.transactions_path, product_path=self.articles_path)
+
+        # 읽으면서 거래일을 날짜형으로 바꾼다
         df = analyzer.load_data(date_cols=["order_date"])
 
         # 행 수는 그대로 3이어야 한다
         self.assertEqual(len(df), 3)
 
-        # 상품 컬럼이 합쳐져 있어야 한다
-        self.assertIn("product_name", df.columns)
+        # 상품명 컬럼이 product_name으로 합쳐져 있어야 한다
+        self.assertEqual(df["product_name"].iloc[0], "Red Shirt")
 
-        # 주문일이 날짜형이어야 한다
+        # 거래일이 날짜형이어야 한다
         self.assertTrue(pd.api.types.is_datetime64_any_dtype(df["order_date"]))
 
         # 돌려준 표가 객체에 저장된 표와 같아야 한다
         self.assertIs(analyzer.df, df)
+
+    # 컬럼 이름 바꾸기 표를 직접 줄 수 있는지
+    def test_load_custom_column_names(self) -> None:
+        # 판매 채널 컬럼 이름만 바꾸도록 지정한다
+        df = DataAnalyzer(self.transactions_path).load_data(
+            column_names={"sales_channel_id": "channel"}
+        )
+
+        # 지정한 이름으로 바뀌어야 한다
+        self.assertIn("channel", df.columns)
+
+        # 기본 규칙(t_dat -> order_date)은 적용되지 않아야 한다
+        self.assertIn("t_dat", df.columns)
+
+
+# 주문 키 만들기 테스트 모음
+class TestOrderKey(unittest.TestCase):
+    # 같은 고객이 같은 날 산 행은 하나의 주문이 되는지
+    def test_same_customer_same_day_is_one_order(self) -> None:
+        # 고객 A는 같은 날 2건, 다른 날 1건 샀고 고객 B는 같은 날 1건 샀다
+        df = pd.DataFrame(
+            {
+                # 고객 번호
+                "customer_id": ["A", "A", "A", "B"],
+                # 거래일
+                "order_date": pd.to_datetime(
+                    ["2020-01-01", "2020-01-01", "2020-01-02", "2020-01-01"]
+                ),
+            }
+        )
+
+        # 분석기를 만들고 주문 키를 추가한다
+        analyzer = make_analyzer(df)
+        analyzer.add_order_key()
+
+        # 주문 키 컬럼의 값을 꺼낸다
+        keys = analyzer.df["order_key"]
+
+        # 고객 A의 같은 날 두 행은 같은 키여야 한다
+        self.assertEqual(keys.iloc[0], keys.iloc[1])
+
+        # 고객 A의 다른 날 행은 다른 키여야 한다
+        self.assertNotEqual(keys.iloc[0], keys.iloc[2])
+
+        # 날짜가 같아도 고객이 다르면 다른 키여야 한다
+        self.assertNotEqual(keys.iloc[0], keys.iloc[3])
+
+        # 서로 다른 주문은 3개여야 한다
+        self.assertEqual(keys.nunique(), 3)
+
+    # 주문 키로 Frequency를 세면 같은 날 구매는 1회로 세는지
+    def test_frequency_counts_orders_not_rows(self) -> None:
+        # 고객 A는 같은 날 3건, 고객 B는 이틀에 걸쳐 2건 샀다
+        df = pd.DataFrame(
+            {
+                # 고객 번호
+                "customer_id": ["A", "A", "A", "B", "B"],
+                # 거래일
+                "order_date": pd.to_datetime(
+                    [
+                        "2020-01-01",
+                        "2020-01-01",
+                        "2020-01-01",
+                        "2020-01-01",
+                        "2020-01-05",
+                    ]
+                ),
+                # 금액
+                "amount": [1.0, 1.0, 1.0, 1.0, 1.0],
+            }
+        )
+
+        # 주문 키를 만든 뒤 RFM을 계산한다 (점수 단계는 2로 줄인다)
+        analyzer = make_analyzer(df)
+        analyzer.add_order_key()
+        rfm = analyzer.calculate_rfm(
+            "customer_id",
+            "order_date",
+            "amount",
+            order_col="order_key",
+            n_score_levels=2,
+        )
+
+        # 고객 A는 3건을 샀지만 주문은 1번이다
+        self.assertEqual(rfm.loc["A", "frequency"], 1)
+
+        # 고객 B는 주문이 2번이다
+        self.assertEqual(rfm.loc["B", "frequency"], 2)
 
 
 # 결측치 처리 테스트 모음
@@ -321,57 +430,81 @@ class TestFeatureEngineering(unittest.TestCase):
         # 4x4 컬러 이미지 3장을 만든다
         self.images = rng.integers(0, 256, size=(3, 4, 4, 3)).astype(np.uint8)
 
+        # 이미지가 있는 상품 번호 3개
+        self.image_article_ids = np.array(["A1", "A2", "A3"])
+
         self.df = pd.DataFrame(
-            # 이미지와 상품 정보가 든 표
+            # 거래와 상품 정보가 든 표 (마지막 행의 상품 A9는 이미지가 없다)
             {
+                # 상품 번호
+                "article_id": ["A1", "A2", "A3", "A9"],
                 "product_name": [
                     "Red Shirt",
                     "Wireless Gaming Mouse Pro",
                     "Tea",
                     # 상품명
+                    "Hat",
                 ],
-                # 이미지를 문자열로 바꿔 넣는다
-                "image_pixels": [image_to_str(image) for image in self.images],
                 # 가격
-                "price": [10.0, 20.0, 30.0],
+                "price": [10.0, 20.0, 30.0, 40.0],
                 # 수량
-                "quantity": [1, 2, 3],
+                "quantity": [1, 2, 3, 4],
             }
         )
 
-    # 문자열을 배열로 되돌리는 테스트
-    def test_parse_images_shape(self) -> None:
-        # 문자열을 이미지 배열로 바꾼다
-        parsed_images = make_analyzer(self.df).parse_images(
-            "image_pixels", image_shape=(4, 4, 3)
-        )
+    # 이미지가 이미 읽힌 분석기를 만드는 도우미
+    def make_analyzer_with_images(self, images: np.ndarray) -> DataAnalyzer:
+        # 표를 넣은 분석기를 만든다
+        analyzer = make_analyzer(self.df)
 
-        # 모양이 (이미지 수, 4, 4, 3)이어야 한다
-        self.assertEqual(parsed_images.shape, (3, 4, 4, 3))
+        # 이미지와 상품 번호를 직접 넣는다
+        analyzer.images = images
 
-        # 원래 이미지와 값이 완전히 같아야 한다
-        np.testing.assert_array_equal(parsed_images, self.images)
+        # 이미지 개수만큼 상품 번호를 맞춰 넣는다
+        analyzer.image_article_ids = self.image_article_ids[: len(images)]
 
-    # 이미지 줄이기 테스트
-    def test_parse_images_downsample(self) -> None:
-        # 2칸마다 1칸씩 뽑는다
-        parsed_images = make_analyzer(self.df).parse_images(
-            "image_pixels", image_shape=(4, 4, 3), downsample_step=2
-        )
+        # 만든 분석기를 돌려준다
+        return analyzer
 
-        # 4x4가 2x2로 줄어야 한다
-        self.assertEqual(parsed_images.shape, (3, 2, 2, 3))
+    # 이미지 파일(npz)을 읽는 테스트
+    def test_load_images(self) -> None:
+        # 임시 폴더에 npz 파일을 만든다
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # npz 파일 경로
+            image_path = os.path.join(temp_dir, "images.npz")
 
-        # 직접 슬라이싱한 결과와 같아야 한다
-        np.testing.assert_array_equal(parsed_images, self.images[:, ::2, ::2, :])
+            # 상품 번호와 이미지를 한 파일에 저장한다
+            np.savez_compressed(
+                image_path, article_ids=self.image_article_ids, images=self.images
+            )
+
+            # 이미지 경로를 가진 분석기로 읽는다
+            analyzer = DataAnalyzer("", image_path=image_path)
+            article_ids, images = analyzer.load_images()
+
+        # 읽은 값이 저장한 값과 같아야 한다
+        np.testing.assert_array_equal(article_ids, self.image_article_ids)
+        np.testing.assert_array_equal(images, self.images)
+
+        # 객체에도 저장돼 있어야 한다
+        self.assertIs(analyzer.images, images)
+
+    # 이미지를 읽기 전에 피처를 만들면 에러가 나는지
+    def test_image_features_require_load_images(self) -> None:
+        # 이미지를 읽지 않은 분석기
+        analyzer = make_analyzer(self.df)
+
+        # 평균, 표준편차 컬럼 추가는 에러여야 한다
+        with self.assertRaises(ValueError):
+            analyzer.add_image_features()
 
     # 이미지 평균, 표준편차 테스트
     def test_image_mean_std(self) -> None:
-        # 분석기를 만든다
-        analyzer = make_analyzer(self.df)
+        # 이미지가 읽힌 분석기를 만든다
+        analyzer = self.make_analyzer_with_images(self.images)
 
         # 평균, 표준편차 컬럼을 추가한다
-        analyzer.add_image_features("image_pixels", image_shape=(4, 4, 3))
+        analyzer.add_image_features()
 
         # 이미지를 하나씩 확인한다
         for row_number, image in enumerate(self.images):
@@ -385,15 +518,44 @@ class TestFeatureEngineering(unittest.TestCase):
                 analyzer.df.loc[row_number, "image_brightness_std"], image.std()
             )
 
+    # 이미지가 없는 상품은 NaN이 되는지
+    def test_image_features_nan_for_missing_image(self) -> None:
+        # 이미지가 읽힌 분석기를 만든다
+        analyzer = self.make_analyzer_with_images(self.images)
+
+        # 평균, 표준편차 컬럼을 추가한다
+        analyzer.add_image_features()
+
+        # 이미지가 없는 상품 A9 행은 비어 있어야 한다
+        self.assertTrue(analyzer.df["image_brightness_mean"].isna().iloc[3])
+
+        # 이미지가 있는 행은 비어 있지 않아야 한다
+        self.assertFalse(analyzer.df["image_brightness_mean"].isna().iloc[0])
+
+    # 같은 상품이 여러 거래에 나오면 같은 값이 붙는지
+    def test_same_article_gets_same_feature(self) -> None:
+        # 상품 A1이 두 번 나오는 표
+        self.df = pd.DataFrame({"article_id": ["A1", "A2", "A1"]})
+
+        # 이미지가 읽힌 분석기를 만든다
+        analyzer = self.make_analyzer_with_images(self.images)
+
+        # 평균 컬럼을 추가한다
+        analyzer.add_image_features()
+
+        # 첫 행과 세 번째 행의 평균이 같아야 한다
+        self.assertEqual(
+            analyzer.df.loc[0, "image_brightness_mean"],
+            analyzer.df.loc[2, "image_brightness_mean"],
+        )
+
     # 밝기 비율, 엣지 컬럼 테스트
     def test_image_advanced_features(self) -> None:
-        # 분석기를 만든다
-        analyzer = make_analyzer(self.df)
+        # 이미지가 읽힌 분석기를 만든다
+        analyzer = self.make_analyzer_with_images(self.images)
 
         # 4구간으로 나눠 컬럼을 추가한다
-        analyzer.add_image_advanced_features(
-            "image_pixels", image_shape=(4, 4, 3), n_brightness_bins=4
-        )
+        analyzer.add_image_advanced_features(n_brightness_bins=4)
 
         # 기대하는 비율 컬럼 이름 4개
         ratio_columns = [
@@ -405,20 +567,23 @@ class TestFeatureEngineering(unittest.TestCase):
             # 모두 만들어졌는지 확인한다
             self.assertIn(column, analyzer.df.columns)
 
-        # 히스토그램 비율의 합은 1
+        # 히스토그램 비율의 합은 1 (이미지가 있는 앞의 3행)
         # 구간별 비율을 더하면 1이어야 한다
-        np.testing.assert_allclose(analyzer.df[ratio_columns].sum(axis=1), 1.0)
+        np.testing.assert_allclose(analyzer.df.loc[:2, ratio_columns].sum(axis=1), 1.0)
+
+        # 이미지가 없는 행은 비어 있어야 한다
+        self.assertTrue(analyzer.df["image_edge_strength"].isna().iloc[3])
 
     # 단색 이미지는 엣지가 없어야 한다
     def test_edge_is_zero_for_flat_image(self) -> None:
         # 모든 픽셀이 128인 이미지 1장
         flat = np.full((1, 4, 4, 3), 128, dtype=np.uint8)
 
-        # 그 이미지로 분석기를 만든다
-        analyzer = make_analyzer(pd.DataFrame({"image_pixels": [image_to_str(flat)]}))
+        # 그 이미지가 읽힌 분석기를 만든다
+        analyzer = self.make_analyzer_with_images(flat)
 
         # 엣지 컬럼을 추가한다
-        analyzer.add_image_advanced_features("image_pixels", image_shape=(4, 4, 3))
+        analyzer.add_image_advanced_features()
 
         # 이웃 픽셀 차이가 없으니 0이어야 한다
         self.assertEqual(analyzer.df.loc[0, "image_edge_strength"], 0.0)
@@ -431,13 +596,13 @@ class TestFeatureEngineering(unittest.TestCase):
         # 단어 수, 글자 수 컬럼을 추가한다
         analyzer.add_text_features("product_name")
 
-        # 단어 수: 2, 4, 1
-        self.assertEqual(analyzer.df["name_word_count"].tolist(), [2, 4, 1])
+        # 단어 수: 2, 4, 1, 1
+        self.assertEqual(analyzer.df["name_word_count"].tolist(), [2, 4, 1, 1])
 
-        # 글자 수(공백 포함): 9, 25, 3
-        self.assertEqual(analyzer.df["name_length"].tolist(), [9, 25, 3])
+        # 글자 수(공백 포함): 9, 25, 3, 3
+        self.assertEqual(analyzer.df["name_length"].tolist(), [9, 25, 3, 3])
 
-    # 주문 금액 계산 테스트
+    # 구매 금액 계산 테스트
     def test_add_amount(self) -> None:
         # 분석기를 만든다
         analyzer = make_analyzer(self.df)
@@ -445,8 +610,8 @@ class TestFeatureEngineering(unittest.TestCase):
         # 가격 x 수량 컬럼을 추가한다
         analyzer.add_amount("price", "quantity")
 
-        # 10x1, 20x2, 30x3
-        self.assertEqual(analyzer.df["amount"].tolist(), [10.0, 40.0, 90.0])
+        # 10x1, 20x2, 30x3, 40x4
+        self.assertEqual(analyzer.df["amount"].tolist(), [10.0, 40.0, 90.0, 160.0])
 
 
 # 통계 테스트 모음
