@@ -1,6 +1,6 @@
 # DataAnalyzer 메서드 상세
 
-[README 3.2 분석 클래스 `DataAnalyzer` 구성](../README.md#32-분석-클래스-dataanalyzer-구성)의 상세 내용이다. 메서드별 주요 인자와 사용 예시를 정리했다. 코드는 [src/pipeline.py](../src/pipeline.py)에 있다.
+[구현 상세 3.2 분석 클래스 `DataAnalyzer` 구성](implementation.md#32-분석-클래스-dataanalyzer-구성)의 상세 내용이다. 메서드별 주요 인자와 사용 예시를 정리했다. 코드는 [src/pipeline.py](../src/pipeline.py)에 있다.
 
 <br>
 <br>
